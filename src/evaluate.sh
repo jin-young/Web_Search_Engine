@@ -7,7 +7,7 @@ sed -e 's/ /+/g' ../data/queries.tsv > queries.txt
 for((i=0; i<${#rankers[*]}; i++))do
   # rm -rf ${outFiles[$i]}
    while read line; do
-       curl "localhost:25804/search?query=$line&ranker=${rankers[$i]}&format=text" | \java edu.nyu.cs.cs2580.Evaluator ../data/qrels.tsv linear
+       curl "localhost:25804/search?query=$line&ranker=${rankers[$i]}&format=text" | \java edu.nyu.cs.cs2580.Evaluator ../data/qrels.tsv ${rankers[$i]}
    done < queries.txt
 done
 

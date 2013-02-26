@@ -36,7 +36,7 @@ class Evaluator {
 	    return;
 	}
 	String p = args[0];
-	String ranker_type = args[1];
+	ranker_type = args[1];
 	// first read the relevance judgments into the HashMap
 	readRelevanceJudgments(p,relevance_judgments);
 	// now evaluate the results from stdin
