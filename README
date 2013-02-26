@@ -1,0 +1,55 @@
+# We assume this location is 'src' folder.
+  Please go to src folder, and test these command. 
+  Thank you.
+
+1) To run Web Search Server
+
+   * Compire : $ javac edu/nyu/cs/cs2580/*.java
+   * Run : $ java edu.nyu.cs.cs2580.SearchEngine 25804 ../data/corpus.tsv
+
+2) Ranker
+   
+   * Send Query : $ curl "localhost:25804/search?query=<QUERY>&ranker=<RANKER-TYPE>&format=<FORMAT-TYPE>"
+   * please use tabke as parameter
+     -------------------------------------------------------------
+	QUERY		|  use [../data/queries.tsv] queries
+       	RANKER-TYPE	|  {cosine, QL, phrase, numviews, linear}
+	FORMAT-TYPE	|  {html, text}
+     -------------------------------------------------------------
+   * Each results are saved on related files.
+     The storage is ../results/
+       > hw1.1-vs.tsv : vector space model
+       > hw1.1-ql.tsv : query likelihood with Jelinek-Mercer smoothing (lambda=0.50)
+       > hw1.1-phrase.tsv : phrase-based ranker
+       > hw1.1-numviews.tsv : numviews-based ranker
+       > hw1.2-linear.tsv : linear ranker
+
+3) Evaluatoion	
+
+   * $ curl "localhost:25804/search?query=<QUERY>&ranker=<RANKER-TYPE>&format=text" | 
+       \java edu.nyu.cs.cs2580.Evaluator ../data/qrels.tsv <RANKER-TYPE>
+   * The second parameter of Evaluator is for saving the reesult on file.
+   * Eash results are accumulatly saved on related files.
+     The storage is ../results/
+       > hw1.3-vsm.tsv
+       > hw1.3-ql.tsv
+       > hw1.3-phrase.tsv
+       > hw1.3-numviews.tsv
+       > hw1.3-linear.tsv
+   * For convenience, we support 'Shell Script' that can run every queries defined in 'queries.tsv'
+     with all ranker-types.
+     Please run this shell script, and look at the result files.
+       $ ./evaluate.sh
+
+4) Bonus: Click logging
+
+   * All actions, either rendered by the server or clicked by the user, are logged.
+       > hw1.4-log.tsv
+   * Action1 : Rendered by the server
+     	       When user requests a query, the top 10 ranked document, rendered by the server, 
+	       is automatically logged as 'render' action.
+   * Action2 : Clicked by the user
+     	       When user clicks a document, the actions is logged as 'click' action.
+	       Use this command line for user click event 
+	       	   $ curl "localhost:25804/clickEvent?sid=<Session-ID>&did=<Document-ID>"
+
