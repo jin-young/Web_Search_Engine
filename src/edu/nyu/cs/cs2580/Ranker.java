@@ -70,7 +70,6 @@ class Ranker {
 	    double dt = _index.documentFrequency(qv.get(i));
 	    double idf = 1 + (Math.log(n/dt) / Math.log(2));
 	    double weight = (double)tf * idf;
-	    //weight = (weight<0) ? -1*weight : weight;
 	    _weights.add(weight);
 	}
 	normalize(_weights);
@@ -115,16 +114,25 @@ class Ranker {
 	double score = 0.0;
 	Vector < String > dv = d.get_title_vector();
 	dv.addAll(d.get_body_vector());
-
-	if(qv.size()<=1 || dv.size()<=1)
-	    return 0;
-	}else{
-	    for(int i=0; i<qv.size()-1; i++)
-		for(int j=0; j<dv.size()-1; j++)
-		    if(qv.get(i).equals(dv.get(j)) && qv.get(i+1).equals(dv.get(j+1)))
+	
+	if(qv.size()==1){
+	    for(int i=0; i<qv.size(); i++)
+		for(int j=0; j<dv.size(); j++)
+		    if(qv.get(i).equals(dv.get(j)))
 			score++;
-	    return score;
-	}	
+	}else{
+	    for(int i=0; i<qv.size()-1; i++){
+		if(dv.size() == 1){
+		    if(qv.get(i).equals(dv.get(0)))
+		       score++;
+		}else{
+		    for(int j=0; j<dv.size()-1; j++)
+			if(qv.get(i).equals(dv.get(j)) && qv.get(i+1).equals(dv.get(j+1)))
+			    score++;
+		}
+	    }
+	}
+	return score;
     }
 
     public double calNumviewsScore(Document d){
