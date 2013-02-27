@@ -46,8 +46,6 @@ class Ranker {
 	}
 	Document d = _index.getDoc(did);
 
-	// Score the document. Here we have provided a very simple ranking model,
-	// where a document is scored 1.0 if it gets hit by at least one query term.
 	double score = 0.0;
 	if(ranker_type.equals("cosine"))
 	    score = calCosineScore(qv, d);  
@@ -59,8 +57,7 @@ class Ranker {
 	    score = calNumviewsScore(d);    
 	else if(ranker_type.equals("linear"))
 	    score = calLinearScore(qv, d); 
-	else
-	    score = calSimpleScore(qv, d);
+
 	return new ScoredDocument(did, d.get_title_string(), score);
     }
 
@@ -116,7 +113,8 @@ class Ranker {
 
     public double calPhraseScore(Vector<String> qv, Document d){
 	double score = 0.0;
-	Vector < String > dv = d.get_body_vector();
+	Vector < String > dv = d.get_title_vector();
+	dv.addAll(d.get_body_vector());
 
 	if(qv.size()==1){
 	    for(int i=0; i<qv.size(); i++)
@@ -140,18 +138,6 @@ class Ranker {
 	double b_cos=0.5, b_lm=0.49, b_phrase=0.0999, b_numviews=0.0001;
 	return b_cos*calCosineScore(qv, d) + b_lm*calQLScore(qv, d)
 	    + b_phrase*calPhraseScore(qv, d) + b_numviews*calNumviewsScore(d);
-    }
-
-    public double calSimpleScore(Vector<String> qv, Document d){
-	Vector < String > dv = d.get_body_vector();
-	for (int i = 0; i < dv.size(); ++i){
-	    for (int j = 0; j < qv.size(); ++j){
-		if (dv.get(i).equals(qv.get(j))){
-		    return 1.0;
-		}
-	    }
-	}
-	return 0.0;
     }
 
     // For sorting of ScoredDocument vector

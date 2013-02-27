@@ -65,9 +65,12 @@ class QueryHandler implements HttpHandler {
 		Set<String> keys = query_map.keySet();
 
 		if (keys.contains("query")){
+		    // To support both (word1+word2) and (word1%20word2) as <space>
 		    String query = query_map.get("query").replace("+", " ");
 		    query_map.put("query", query);
-		    sqMap.put(curSID++, query);
+
+		    // register query history with session ID 
+		    sqMap.put(curSID++, query);   
 		    
 		    if (keys.contains("ranker")){
 			String ranker_type = query_map.get("ranker");
