@@ -4,6 +4,7 @@ import java.util.Vector;
 import java.util.Scanner;
 import java.util.Comparator;
 import java.util.Collections;
+import java.io.File;
 
 class Ranker {
     private Index _index;
@@ -11,6 +12,13 @@ class Ranker {
 
     public Ranker(String index_source){
 	_index = new Index(index_source);
+	createResultDir();
+    }
+
+    public void createResultDir(){
+	 File d = new File("../results");
+	 if (!d.isDirectory())
+	     d.mkdir();
     }
 
     public void setRankerType(String ranker_type){
