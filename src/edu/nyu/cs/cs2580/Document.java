@@ -35,7 +35,8 @@ class Document {
     // # of occurrences of s in the doc
     public int termFrequencyInDoc(String s){
 	int frequency = 0;
-	Vector<String> dv = get_body_vector();
+	Vector<String> dv = get_title_vector();
+	dv.addAll(get_body_vector());
 	for(int i=0; i<dv.size(); i++)
 	    if(dv.get(i).equals(s))
 		frequency++;

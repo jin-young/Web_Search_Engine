@@ -96,9 +96,11 @@ class Ranker {
     public double calQLScore(Vector<String> qv, Document d){
 	double score=1.0, lambda=0.50;
 	int cgi = 0;
+	Vector<String> dv = d.get_title_vector();
+	dv.addAll(d.get_body_vector());
 	for(int i=0; i<qv.size(); i++)
 	    score *= ((1-lambda)*((double)d.termFrequencyInDoc(qv.get(i))
-				  / (double)d.get_body_vector().size())
+				  / (double)dv.size())
 		      + (lambda)*((double)Document.termFrequency(qv.get(i))
 				  / (double)Document.termFrequency()));
 	return score;
