@@ -129,7 +129,7 @@ class Ranker {
     }
  
     public double calLinearScore(Vector<String> qv, Document d){
-	double b_cos=0.5, b_lm=0.5, b_phrase=0.5, b_numviews=0.5;
+	double b_cos=0.5, b_lm=0.49, b_phrase=0.0999, b_numviews=0.0001;
 	return b_cos*calCosineScore(qv, d) + b_lm*calQLScore(qv, d)
 	    + b_phrase*calPhraseScore(qv, d) + b_numviews*calNumviewsScore(d);
     }
