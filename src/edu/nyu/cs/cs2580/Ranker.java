@@ -116,18 +116,15 @@ class Ranker {
 	Vector < String > dv = d.get_title_vector();
 	dv.addAll(d.get_body_vector());
 
-	if(qv.size()==1){
-	    for(int i=0; i<qv.size(); i++)
-		for(int j=0; j<dv.size(); j++)
-		    if(qv.get(i).equals(dv.get(j)))
-			score++;
+	if(qv.size()<=1 || dv.size()<=1)
+	    return 0;
 	}else{
 	    for(int i=0; i<qv.size()-1; i++)
 		for(int j=0; j<dv.size()-1; j++)
 		    if(qv.get(i).equals(dv.get(j)) && qv.get(i+1).equals(dv.get(j+1)))
 			score++;
-	}
-	return score;
+	    return score;
+	}	
     }
 
     public double calNumviewsScore(Document d){

@@ -177,7 +177,7 @@ class QueryHandler implements HttpHandler {
     public void printResult(String outFileName, String content, String format){
 	String fileName = format.equals("text") ? outFileName+".tsv" : outFileName+".html";
 	try {
-	    BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
+	    BufferedWriter out = new BufferedWriter(new FileWriter(fileName, true));
 	    out.write(content);
 	    out.close();
 	} catch (IOException e) {

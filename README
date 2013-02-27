@@ -7,6 +7,9 @@
    * Compire : $ javac edu/nyu/cs/cs2580/*.java
    * Run : $ java edu.nyu.cs.cs2580.SearchEngine 25804 ../data/corpus.tsv
 
+   Or you can do both of them by using shell script.
+   * Compire & Run : $ ./start.sh
+
 2) Ranker
    
    * Send Query : $ curl "localhost:25804/search?query=<QUERY>&ranker=<RANKER-TYPE>&format=<FORMAT-TYPE>"
