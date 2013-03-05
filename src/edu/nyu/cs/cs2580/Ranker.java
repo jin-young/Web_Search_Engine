@@ -1,161 +1,86 @@
 package edu.nyu.cs.cs2580;
 
 import java.util.Vector;
-import java.util.Scanner;
-import java.util.Comparator;
-import java.util.Collections;
-import java.io.File;
 
-class Ranker {
-    private Index _index;
-    private String ranker_type;
+import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
+import edu.nyu.cs.cs2580.SearchEngine.Options;
 
-    public Ranker(String index_source){
-	_index = new Index(index_source);
-	createResultDir();
+/**
+ * This is the abstract Ranker class for all concrete Ranker implementations.
+ *
+ * Use {@link Ranker.Factory} to create your concrete Ranker implementation. Do
+ * NOT change the interface in this class!
+ *
+ * In HW1: {@link RankerFullScan} is the instructor's simple ranker and students
+ * implement four additional concrete Rankers.
+ *
+ * In HW2: students will pick a favorite concrete Ranker other than
+ * {@link RankerPhrase}, and re-implement it using the more efficient
+ * concrete Indexers.
+ *
+ * 2013-02-16: The instructor's code went through substantial refactoring
+ * between HW1 and HW2, students are expected to refactor code accordingly.
+ * Refactoring is a common necessity in real world and part of the learning
+ * experience.
+ *
+ * @author congyu
+ * @author fdiaz
+ */
+public abstract class Ranker {
+    // Options to configure each concrete Ranker.
+    protected Options _options;
+    // CGI arguments user provide through the URL.
+    protected CgiArguments _arguments;
+
+    // The Indexer via which documents are retrieved, see {@code IndexerFullScan}
+    // for a concrete implementation. N.B. Be careful about thread safety here.
+    protected Indexer _indexer;
+
+    /**
+     * Constructor: the construction of the Ranker requires an Indexer.
+     */
+    protected Ranker(Options options, CgiArguments arguments, Indexer indexer) {
+	_options = options;
+	_arguments = arguments;
+	_indexer = indexer;
     }
 
-    public void createResultDir(){
-	 File d = new File("../results");
-	 if (!d.isDirectory())
-	     d.mkdir();
-    }
+    /**
+     * Processes one query.
+     * @param query the parsed user query
+     * @param numResults number of results to return
+     * @return Up to {@code numResults} scored documents in ranked order
+     */
+    public abstract Vector<ScoredDocument> runQuery(Query query, int numResults);
 
-    public void setRankerType(String ranker_type){
-	this.ranker_type = ranker_type;
-    }
-
-    public Vector < ScoredDocument > runquery(String query){
-	Vector < ScoredDocument > retrieval_results = new Vector < ScoredDocument > ();
-	for (int i = 0; i < _index.numDocs(); ++i){
-	    retrieval_results.add(runquery(query, i));
-	}
-	// Sort with decreasing order of relevance
-	Collections.sort(retrieval_results, new SdComparator());
-	return retrieval_results;
-    }
-
-    public ScoredDocument runquery(String query, int did){
-
-	// Build query vector
-	Vector < String > qv = new Vector < String > ();
-	Scanner s = new Scanner(query);
-	while (s.hasNext()){
-	    String term = s.next();
-	    qv.add(term);
-	}
-	Document d = _index.getDoc(did);
-
-	double score = 0.0;
-	if(ranker_type.equals("cosine"))
-	    score = calCosineScore(qv, d);  
-	else if(ranker_type.equals("QL"))
-	    score = calQLScore(qv, d);     
-	else if(ranker_type.equals("phrase"))
-	    score = calPhraseScore(qv, d); 
-	else if(ranker_type.equals("numviews"))
-	    score = calNumviewsScore(d);    
-	else if(ranker_type.equals("linear"))
-	    score = calLinearScore(qv, d); 
-
-	return new ScoredDocument(did, d.get_title_string(), score);
-    }
-
-    public double calCosineScore(Vector<String> qv, Document d){
-	double sumWeight=0.0, sumWeight2=0.0;
-	Vector<Double> _weights = new Vector<Double>();
-	for(int i=0; i<qv.size(); i++){
-	    double tf = d.termFrequencyInDoc(qv.get(i));
-	    double n = _index.numDocs();
-	    double dt = _index.documentFrequency(qv.get(i));
-	    double idf = 1 + (Math.log(n/dt) / Math.log(2));
-	    double weight = (double)tf * idf;
-	    _weights.add(weight);
-	}
-	normalize(_weights);
-	
-	for(int i=0; i<_weights.size(); i++){
-	    sumWeight += _weights.get(i);
-	    sumWeight2 += _weights.get(i) * _weights.get(i); 
-	}
-	if(sumWeight == 0.0)  return 0.0;
-	return sumWeight / Math.sqrt(sumWeight2 * (double)qv.size());	    
-    }
-
-    public void normalize(Vector<Double> _weights){
-	double sum = 0.0;
-	for(int i=0; i<_weights.size(); i++)
-	    sum += _weights.get(i) * _weights.get(i);
-	if(sum==0)  return;
-	sum = Math.sqrt(sum);
-	for(int i=0; i<_weights.size(); i++){
-	    double newWeight = _weights.get(i)/sum;
-	    _weights.set(i, newWeight);
-	}
-    }
-    
-    // Query Likelihood (language model)
-    // Smoothing : Jelinek-Mercer smoothing
-    // lambda : 0.50
-    public double calQLScore(Vector<String> qv, Document d){
-	double score=1.0, lambda=0.50;
-	int cgi = 0;
-	Vector<String> dv = d.get_title_vector();
-	dv.addAll(d.get_body_vector());
-	for(int i=0; i<qv.size(); i++)
-	    score *= ((1-lambda)*((double)d.termFrequencyInDoc(qv.get(i))
-				  / (double)dv.size())
-		      + (lambda)*((double)Document.termFrequency(qv.get(i))
-				  / (double)Document.termFrequency()));
-	return score;
-    }
-
-    public double calPhraseScore(Vector<String> qv, Document d){
-	double score = 0.0;
-	Vector < String > dv = d.get_title_vector();
-	dv.addAll(d.get_body_vector());
-	
-	if(qv.size()==1){
-	    for(int i=0; i<qv.size(); i++)
-		for(int j=0; j<dv.size(); j++)
-		    if(qv.get(i).equals(dv.get(j)))
-			score++;
-	}else{
-	    for(int i=0; i<qv.size()-1; i++){
-		if(dv.size() == 1){
-		    if(qv.get(i).equals(dv.get(0)))
-		       score++;
-		}else{
-		    for(int j=0; j<dv.size()-1; j++)
-			if(qv.get(i).equals(dv.get(j)) && qv.get(i+1).equals(dv.get(j+1)))
-			    score++;
-		}
+    /**
+     * All Rankers must be created through this factory class based on the
+     * provided {@code arguments}.
+     */
+    public static class Factory {
+	public static Ranker getRankerByArguments(CgiArguments arguments,
+						  Options options, Indexer indexer) {
+	    switch (arguments._rankerType) {
+	    case FULLSCAN:
+		return new RankerFullScan(options, arguments, indexer);
+	    case CONJUNCTIVE:
+		return new RankerConjunctive(options, arguments, indexer);
+	    case FAVORITE:
+		return new RankerFavorite(options, arguments, indexer);
+	    case COSINE:
+		return new RankerCosine(options, arguments, indexer);
+	    case QL:
+		return new RankerQL(options, arguments, indexer);
+	    case PHRASE:
+		return new RankerPhrase(options, arguments, indexer);
+	    case LINEAR:
+		return new RankerLinear(options, arguments, indexer);
+	    case NONE:
+		// Fall through intended
+	    default:
+		// Do nothing.
 	    }
-	}
-	return score;
-    }
-
-    public double calNumviewsScore(Document d){
-	return d.get_numviews();
-    }
- 
-    public double calLinearScore(Vector<String> qv, Document d){
-	double b_cos=0.5, b_lm=0.49, b_phrase=0.0999, b_numviews=0.0001;
-	return b_cos*calCosineScore(qv, d) + b_lm*calQLScore(qv, d)
-	    + b_phrase*calPhraseScore(qv, d) + b_numviews*calNumviewsScore(d);
-    }
-
-    // For sorting of ScoredDocument vector
-    static class SdComparator implements Comparator<ScoredDocument> {
- 	@Override
-	    public int compare(ScoredDocument arg0, ScoredDocument arg1) {
-	    if(arg0._score < arg1._score)  return 1;
-	    else if(arg0._score > arg1._score)  return -1;
-	    else  return 0;
+	    return null;
 	}
     }
 }
-
-
-
-
