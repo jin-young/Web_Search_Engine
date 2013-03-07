@@ -26,9 +26,16 @@ class Document implements Serializable {
   // Basic information for ranking
   private float _pageRank = 0.0f;
   private int _numViews = 0;
+  
+  private String _line = "";
 
   public Document(int docid) {
     _docid = docid;
+  }
+  
+  public Document(int docid, String line) {
+	  this(docid);
+	  setLine(line);
   }
 
   public String getTitle() {
@@ -62,4 +69,27 @@ class Document implements Serializable {
   public void setNumViews(int numViews) {
     this._numViews = numViews;
   }
+
+public String getLine() {
+	return _line;
+}
+
+public void setLine(String _line) {
+	this._line = _line;
+}
+
+public static int documentFrequency(String s) {
+	// TODO Auto-generated method stub
+	return 0;
+}
+
+public static int termFrequency(String s) {
+	// TODO Auto-generated method stub
+	return 0;
+}
+
+public static int termFrequency() {
+	// TODO Auto-generated method stub
+	return 0;
+}
 }

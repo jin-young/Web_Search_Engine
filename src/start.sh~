@@ -1,6 +1,0 @@
-#!/bin/bash
-
-java edu/nyu/cs/cs2580/*.java
-java edu.nyu.cs.cs2580.SearchEngine 25804 ../data/corpus.tsv
-
-exit 0
