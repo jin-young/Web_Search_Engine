@@ -1,0 +1,5 @@
+*.class
+*.java~
+.classpath
+.project
+#QueryHandler.java#
