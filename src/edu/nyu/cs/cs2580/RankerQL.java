@@ -51,12 +51,12 @@ class RankerQL extends Ranker {
 	// Score the document.
 	for(String queryToken : query._tokens){
 	    score *= ((1-lambda)
-		      *(((DocumentIndexed) doc).termFrequencyInDoc(queryToken)
+		      *(_indexer.documentTermFrequency(queryToken, doc.getUrl())
 			/ (double)docTokens.size())
 		      + 
 		      (lambda)
-		      *((double)DocumentIndexed.termFrequency(queryToken)
-			/ (double)DocumentIndexed.termFrequency()));
+		      *((double)_indexer.corpusTermFrequency(queryToken)
+			/ (double)_indexer.totalTermFrequency()));
 	}
 	return score;
     }

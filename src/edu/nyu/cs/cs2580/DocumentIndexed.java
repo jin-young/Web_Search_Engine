@@ -10,23 +10,4 @@ public class DocumentIndexed extends Document {
     public DocumentIndexed(int docid) {
 	super(docid);
     }
-
-    // # of occurrences of string s in the doc
-    public int termFrequencyInDoc(String s){
-	// Implement...
-	return 0;
-    }
-
-    // # of occurrences of s in the entire collection
-    public static int termFrequency(String s){
-	// Implement...
-	return 0;
-    }
-
-    // # of words occurences in the collection
-    // i.e. sum of termFrequency(s) over all words in the vocabulary
-    public static int termFrequency(){
-	// Implement...
-	return 0;
-    }
 }

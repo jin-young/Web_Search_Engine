@@ -45,10 +45,10 @@ class RankerCosine extends Ranker {
 	// Variables
 	double sumWeight=0.0, sumWeight2=0.0;
 	Vector<Double> _weights = new Vector<Double>();
-
+	
 	// Score the document.
 	for(String queryToken : query._tokens){
-	    double tf = ((DocumentIndexed)doc).termFrequencyInDoc(queryToken);
+	    double tf = _indexer.documentTermFrequency(queryToken, doc.getUrl());
 	    double n = _indexer.numDocs();
 	    double dt = _indexer.corpusDocFrequencyByTerm(queryToken);
 	    double idf = 1 + (Math.log(n/dt) / Math.log(2));

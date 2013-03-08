@@ -15,81 +15,81 @@ import java.io.Serializable;
  * @author congyu
  */
 class Document implements Serializable {
-  private static final long serialVersionUID = -539495106357836976L;
+    private static final long serialVersionUID = -539495106357836976L;
 
-  public int _docid;
+    public int _docid;
 
-  // Basic information for display
-  private String _title = "";
-  private String _url = "";
+    // Basic information for display
+    private String _title = "";
+    private String _url = "";
   
-  // Basic information for ranking
-  private float _pageRank = 0.0f;
-  private int _numViews = 0;
+    // Basic information for ranking
+    private float _pageRank = 0.0f;
+    private int _numViews = 0;
   
-  private String _line = "";
+    private String _line = "";
 
-  public Document(int docid) {
-    _docid = docid;
-  }
+    public Document(int docid) {
+	_docid = docid;
+    }
   
-  public Document(int docid, String line) {
-	  this(docid);
-	  setLine(line);
-  }
+    public Document(int docid, String line) {
+	this(docid);
+	setLine(line);
+    }
 
-  public String getTitle() {
-    return _title;
-  }
+    public String getTitle() {
+	return _title;
+    }
 
-  public void setTitle(String title) {
-    this._title = title;
-  }
+    public void setTitle(String title) {
+	this._title = title;
+    }
 
-  public String getUrl() {
-    return _url;
-  }
+    public String getUrl() {
+	return _url;
+    }
 
-  public void setUrl(String url) {
-    this._url = url;
-  }
+    public void setUrl(String url) {
+	this._url = url;
+    }
 
-  public float getPageRank() {
-    return _pageRank;
-  }
+    public float getPageRank() {
+	return _pageRank;
+    }
 
-  public void setPageRank(float pageRank) {
-    this._pageRank = pageRank;
-  }
+    public void setPageRank(float pageRank) {
+	this._pageRank = pageRank;
+    }
 
-  public int getNumViews() {
-    return _numViews;
-  }
+    public int getNumViews() {
+	return _numViews;
+    }
 
-  public void setNumViews(int numViews) {
-    this._numViews = numViews;
-  }
+    public void setNumViews(int numViews) {
+	this._numViews = numViews;
+    }
 
-public String getLine() {
+    public String getLine() {
 	return _line;
-}
+    }
 
-public void setLine(String _line) {
+    public void setLine(String _line) {
 	this._line = _line;
-}
+    }
 
-public static int documentFrequency(String s) {
+    public static int documentFrequency(String s) {
 	// TODO Auto-generated method stub
 	return 0;
-}
+    }
 
-public static int termFrequency(String s) {
+    public static int termFrequency(String s) {
 	// TODO Auto-generated method stub
 	return 0;
-}
+    }
 
-public static int termFrequency() {
+    public static int termFrequency() {
 	// TODO Auto-generated method stub
 	return 0;
-}
+    }
 }
