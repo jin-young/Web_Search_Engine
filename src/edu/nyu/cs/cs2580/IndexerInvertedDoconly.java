@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.io.File;
-
+import java.io.FileNotFoundException;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 /**
@@ -18,14 +18,13 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class IndexerInvertedDoconly extends Indexer {
     // Maps each term to their integer representation
-    private Map<String, Vector<Integer>> _dictionary 
-	= new HashMap<String, Vector<Integer>>();
+    private Map<String, Integer> _dictionary 
+	= new HashMap<String, Integer>();
 
-    // Term document frequency, key is the integer representation of the term
-    // and
-    // value is the number of documents the term appears in.
-    private Map<Integer, Integer> _termDocFrequency 
-	= new HashMap<Integer, Integer>();
+    // Inverted Index, key is the integer representation of the term and value
+    // is the id list of document which appear this term.
+    private Map<Integer, Vector<Integer>> _index
+	= new HashMap<Integer, Vector<Integer>>();
 
     // Term frequency, key is the integer representation of the term and value
     // is the number of times the term appears in the corpus.
@@ -34,9 +33,6 @@ public class IndexerInvertedDoconly extends Indexer {
 
     // Stores all Document in memory.
     private Vector<Document> _documents = new Vector<Document>();
-
-    // Document ID
-    private int did = 0;
 
     public IndexerInvertedDoconly(Options options) {
 	super(options);
@@ -53,19 +49,21 @@ public class IndexerInvertedDoconly extends Indexer {
 	for(File file : listOfFiles){
 	    if (file.isFile()){
 		processDocument(file);		    
-		System.out.println("Indexed " + Integer.toString(_numDocs)
-				   + " docs with " 
-				   + Long.toString(_totalTermFrequency)
-				   + " terms.");
-
-		String indexFile = _options._indexPrefix + "/corpus.idx";
-		System.out.println("Store index to: " + indexFile);
-		ObjectOutputStream writer = new ObjectOutputStream(
-					   new FileOutputStream(indexFile));
-		writer.writeObject(this);
-		writer.close();
 	    }
 	}	
+
+	System.out.println("Indexed " + Integer.toString(_numDocs)
+			   + " docs with " 
+			   + Long.toString(_totalTermFrequency)
+			   + " terms.");
+
+	String indexFile = _options._indexPrefix + "/corpus.idx";
+	System.out.println("Store index to: " + indexFile);
+	ObjectOutputStream writer = new ObjectOutputStream(
+					   new FileOutputStream(indexFile));
+	writer.writeObject(this);
+	writer.close();
+
     }
 
     /**
@@ -77,34 +75,44 @@ public class IndexerInvertedDoconly extends Indexer {
      *       to drop the processing of a certain inverted list.
      */
     private void processDocument(File file){
-
+	int did = _documents.size();
 	String content = retrieveContent(file);
 	content = removeNonVisible(content);
-	readTermVector(content);
+	makeIndex(content, did);
 	
-	//	DocumentIndexed doc = new DocumentIndexed(did);
-	//	doc.setTitle(file.getName());
-	++did;
+	DocumentIndexed doc = new DocumentIndexed(did);
+	doc.setTitle(file.getName());
+	doc.setUrl(_options._corpusPrefix + "/"+ file.getName());
+	_documents.add(doc);
+	++_numDocs;
     }
     
     /**
-     * Tokenize {@code content} into terms, translate terms into their integer
-     * representation, store the integers in {@code tokens}.
-     * 
+     * Make Index with content string of html.
+     *
      * @param content
-     * @param tokens
+     * @param did
      */
-    private void readTermVector(String content) {
+    private void makeIndex(String content, int did) {
 	Scanner s = new Scanner(content); // Uses white space by default.
 	while (s.hasNext()) {
 	    String token = porterAlg( s.next() );
+	    int idx = -1;
 	    if (_dictionary.containsKey(token)) {
-		_dictionary.get(token).add(did);
+		idx = _dictionary.get(token);
+		Vector<Integer> docList = _index.get(idx);
+		if(!docList.contains(did))
+		    docList.add(did);
 	    } else {
-		Vector<Integer> tmp = new Vector<Integer>();
-		tmp.add(did);
-		_dictionary.put(token, tmp);
+		idx = _dictionary.size();
+		_dictionary.put(token, idx);
+		Vector<Integer> docList = new Vector<Integer>();
+		docList.add(did);
+		_index.put(idx, docList);
+		_termCorpusFrequency.put(idx, 0);
 	    }
+	    _termCorpusFrequency.put(idx, _termCorpusFrequency.get(idx)+1);
+	    ++_totalTermFrequency;
 	}
 	s.close();
 	return;
@@ -117,12 +125,13 @@ public class IndexerInvertedDoconly extends Indexer {
     private String porterAlg(String word){
 	String ret = word;
 	if(word.endsWith("s")){
+	    int len = word.length();
 	    if(word.endsWith("sses"))
-		ret = word.substring(0, word.length()-5);
+		ret = (len-5 < 0) ? "" : word.substring(0, len-5);
 	    else if(word.endsWith("ies"))
-		ret = word.substring(0, word.length()-4);
+		ret = (len-4 < 0) ? "" : word.substring(0, len-4);
 	    else if(word.endsWith("s"))
-		ret = word.substring(0, word.length()-2);
+		ret = (len-2 < 0) ? "" : word.substring(0, len-2);
 	}
 	return ret;
     }
@@ -132,20 +141,26 @@ public class IndexerInvertedDoconly extends Indexer {
      * 
      */
     private String retrieveContent(File file){
-	Scanner scanner = new Scanner(_options._corpusPrefix + file);
+	Scanner scanner;
 	String content="";
-	CharSequence csBodyStart = "<body", csBodyEnd = "</body>";
-	boolean readBodyFlag=false;
-	while (scanner.hasNextLine()) {
-	    String line = scanner.nextLine();
-	    if(readBodyFlag || line.contains(csBodyStart)){
-		content += line;
-		readBodyFlag = true;
-		if(line.contains(csBodyEnd))
-		    readBodyFlag = false;
-	    }	    
+	try{
+	    System.out.println(file.getName());
+	    scanner = new Scanner(file);
+	    CharSequence csBodyStart = "<body", csBodyEnd = "</body>";
+	    boolean readBodyFlag=false;
+	    while (scanner.hasNextLine()) {
+		String line = scanner.nextLine();
+		if(readBodyFlag || line.contains(csBodyStart)){
+		    content += line;
+		    readBodyFlag = true;
+		    if(line.contains(csBodyEnd))
+			readBodyFlag = false;
+		}	    
+	    }
+	    scanner.close();
+	}catch(FileNotFoundException ffe){
+	    System.err.println(ffe.getMessage());
 	}
-	scanner.close();
 	return content;
     }
 
@@ -153,10 +168,21 @@ public class IndexerInvertedDoconly extends Indexer {
      * remove Non-visible page content, e.g., <script>
      */
     private String removeNonVisible(String content){
+	String ans = content;
+	// remove <script> ... </script>
+	int start, end;
+	while((start = ans.indexOf("<script")) != -1){
+	    if((end = ans.indexOf("</script>")) != -1){
+		ans = ans.substring(0, start-1) + ans.substring(end+9);
+	    }else
+		break;
+	}
+	
+	// remove other < ... >
 	StringBuffer sb = new StringBuffer();
 	boolean readFlag = true;
-	for(int i=0; i<content.length(); i++){
-	    char ch = content.charAt(i);
+	for(int i=0; i<ans.length(); i++){
+	    char ch = ans.charAt(i);
 	    if(ch == '<')
 		readFlag = false;
 	    else if(ch == '>')
@@ -178,7 +204,7 @@ public class IndexerInvertedDoconly extends Indexer {
 	IndexerInvertedDoconly loaded 
 	    = (IndexerInvertedDoconly) reader.readObject();
 
-	//this._documents = loaded._documents;
+	this._documents = loaded._documents;
 
 	// Compute numDocs and totalTermFrequency b/c Indexer is not
 	// serializable.
@@ -186,9 +212,9 @@ public class IndexerInvertedDoconly extends Indexer {
 	for (Integer freq : loaded._termCorpusFrequency.values()) {
 	    this._totalTermFrequency += freq;
 	}
+	this._index = loaded._index;
 	this._dictionary = loaded._dictionary;
 	this._termCorpusFrequency = loaded._termCorpusFrequency;
-	this._termDocFrequency = loaded._termDocFrequency;
 	reader.close();
 
 	System.out.println(Integer.toString(_numDocs) + " documents loaded "
@@ -212,8 +238,8 @@ public class IndexerInvertedDoconly extends Indexer {
 
     @Override
     public int corpusDocFrequencyByTerm(String term) {
-	return _dictionary.containsKey(term) ? _termDocFrequency
-	    .get(_dictionary.get(term)) : 0;
+	return _dictionary.containsKey(term) ? 
+	    _index.get(_dictionary.get(term)).size() : 0;
     }
 
     @Override
