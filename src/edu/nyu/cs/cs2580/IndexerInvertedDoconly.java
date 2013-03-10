@@ -30,7 +30,9 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     // is the number of times the term appears in the corpus.
     private Map<Integer, Integer> _termCorpusFrequency 
 	= new HashMap<Integer, Integer>();
-
+    // Stores only necessary information.
+    private Vector<DocumentIndexed> _documents = new Vector<DocumentIndexed>();
+    
     public IndexerInvertedDoconly(Options options) {
 	super(options);
 	System.out.println("Using Indexer: " + this.getClass().getSimpleName());
@@ -108,9 +110,65 @@ public class IndexerInvertedDoconly extends IndexerCommon {
      */
     @Override
     public Document nextDoc(Query query, int docid) {
-	return null;
+    	Vector<Integer> docs = new Vector<Integer>();
+    	int doc;
+    	
+    	for(int i=0; i<query._tokens.size();i++){//find next document for each query
+    		doc=next(query._tokens.get(i),docid);
+    		if(doc!=-1)
+    			docs.add(doc);
+    	}
+    	
+    	
+    	if(docs.size()<query._tokens.size())//no more document
+    		return null;
+    	if (equal(docs))//found!
+    		return _documents.get(docs.get(0));
+    	//search next
+    		return nextDoc(query,Max(docs)-1);
     }
 
+    private int next(String word, int docid){
+    	int key=_dictionary.get(word);
+    	if(!_index.containsKey(key)||_index.get(key).lastElement()<=docid)
+    		return -1;
+    	if(_index.get(key).firstElement()>docid)
+    		return _index.get(key).firstElement();
+    	return _index.get(key).get(binarySearch(key,1,_index.size()-1,docid));
+    	
+    }
+    
+    private int binarySearch(int key, int low, int high, int docid){
+    	int mid;
+    	while(high-low>1){
+    		mid=(int) Math.floor((low+high)/2);
+    		if(_index.get(key).get(mid)<=docid)
+    			low=mid;
+    		else
+    			high=mid;
+    	}
+    	return high;
+    }
+    
+    private boolean equal(Vector<Integer> docs){
+    	boolean result=true;
+    	int docid=docs.get(0);
+    	for(int i=1;i<docs.size();i++){
+    		if(docs.get(i)!=docid)
+    			result=false;
+    	}
+    	return result;
+    }
+    
+    private int Max(Vector<Integer> docs){
+    	int max=0;
+    	for(int i=0;i<docs.size();i++){
+    		if(docs.get(i)>max)
+    			max=docs.get(i);
+    	}
+    	return max;
+    }
+    
     @Override
     public int corpusDocFrequencyByTerm(String term) {
 	return _dictionary.containsKey(term) ? 
