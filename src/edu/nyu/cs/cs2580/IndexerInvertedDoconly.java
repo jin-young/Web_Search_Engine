@@ -21,6 +21,10 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     private Map<String, Integer> _dictionary 
 	= new HashMap<String, Integer>();
 
+    private Map<Integer, Integer> _cachedIndex
+    = new HashMap<Integer, Integer>();
+    
+    
     // Inverted Index, key is the integer representation of the term and value
     // is the id list of document which appear this term.
     private Map<Integer, Vector<Integer>> _index
@@ -61,6 +65,7 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 		Vector<Integer> docList = new Vector<Integer>();
 		docList.add(did);
 		_index.put(idx, docList);
+		_cachedIndex.put(idx, 0);
 		_termCorpusFrequency.put(idx, 0);
 	    }
 	    _termCorpusFrequency.put(idx, _termCorpusFrequency.get(idx)+1);
@@ -127,7 +132,36 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     	//search next
     		return nextDoc(query,Max(docs)-1);
     }
+    
+    //galloping search
+    private int next2(String word, int docid){
+    	int low, high, jump;
+    	int key=_dictionary.get(word);
+    	if(!_index.containsKey(key)||_index.get(key).lastElement()<=docid)
+    		return -1;
+    	if(_index.get(key).firstElement()>docid){
+    		_cachedIndex.put(key, 1);
+    		return _index.get(key).firstElement();    		
+    	}
+    	if(_cachedIndex.get(key)>1&&_index.get(key).get(_cachedIndex.get(key)-1)<=docid)
+    		low=_cachedIndex.get(key)-1;
+    	else
+    		low=1;
+    	jump=1;
+    	high=low+jump;
+    	while(high<_index.get(key).lastElement()&&_index.get(key).get(high)<=docid){
+    		low=high;
+    		jump=2*jump;
+    		high=low+jump;
+    	}
+    	if(high>_index.get(key).lastElement())
+    		high=_index.get(key).lastElement();
+    	_cachedIndex.put(key, binarySearch(key,low,high,docid));    	
+    	return _index.get(key).get(_cachedIndex.get(key));
+    	
+    }
 
+    //binary search
     private int next(String word, int docid){
     	int key=_dictionary.get(word);
     	if(!_index.containsKey(key)||_index.get(key).lastElement()<=docid)
