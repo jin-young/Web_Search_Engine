@@ -1,6 +1,12 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Scanner;
+
+import org.tartarus.snowball.SnowballStemmer;
+import org.tartarus.snowball.ext.englishStemmer;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -20,7 +26,9 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @author fdiaz
  */
 public abstract class Indexer {
-  // Options to configure each concrete Indexer, do not serialize.
+  protected static SnowballStemmer _stemmer = new englishStemmer();
+
+// Options to configure each concrete Indexer, do not serialize.
   protected Options _options = null;
 
   // In-memory data structures populated once for each server. Those fields
@@ -120,6 +128,63 @@ public abstract class Indexer {
   public abstract int documentTermFrequency(String term, String url);
 
   /**
+ * Read HTML <body> ... </body>
+ * 
+ */
+public String retrieveContent(File file) {
+	Scanner scanner;
+	String content = "";
+	try {
+		System.out.println(file.getName());
+		scanner = new Scanner(file);
+		CharSequence csBodyStart = "<body", csBodyEnd = "</body>";
+		boolean readBodyFlag = false;
+		while (scanner.hasNextLine()) {
+			String line = scanner.nextLine();
+			if (readBodyFlag || line.contains(csBodyStart)) {
+				content += line;
+				readBodyFlag = true;
+				if (line.contains(csBodyEnd))
+					readBodyFlag = false;
+			}
+		}
+		scanner.close();
+	} catch (FileNotFoundException ffe) {
+		System.err.println(ffe.getMessage());
+	}
+	return content;
+}
+
+/**
+ * remove Non-visible page content, e.g., <script>
+ */
+public String removeNonVisible(String content) {
+	String ans = content;
+	// remove <script> ... </script>
+	int start, end;
+	while ((start = ans.indexOf("<script")) != -1) {
+		if ((end = ans.indexOf("</script>")) != -1) {
+			ans = ans.substring(0, start - 1) + ans.substring(end + 9);
+		} else
+			break;
+	}
+
+	// remove other < ... >
+	StringBuffer sb = new StringBuffer();
+	boolean readFlag = true;
+	for (int i = 0; i < ans.length(); i++) {
+		char ch = ans.charAt(i);
+		if (ch == '<')
+			readFlag = false;
+		else if (ch == '>')
+			readFlag = true;
+		else if (readFlag)
+			sb.append(ch);
+	}
+	return sb.toString();
+}
+
+/**
    * All Indexers must be created through this factory class based on the
    * provided {@code options}.
    */

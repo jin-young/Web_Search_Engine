@@ -1,16 +1,16 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.Scanner;
 import java.util.Vector;
+
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
+	
 	// Stores all Document in memory.
 	public Vector<Document> _documents = new Vector<Document>();
 
@@ -74,8 +74,13 @@ public abstract class IndexerCommon extends Indexer {
 
 	/**
 	 * Porter Algorithm : step1 remove plurals
+	 * 
+	 * @Deprecated Even though, this method has been modified to use porter2 library,
+	 * it is strongly recommended to use stemmer class directly in your code instead of calling
+	 * this method because of avoiding unnecessary method calling.
 	 */
 	public String porterAlg(String word) {
+		/*
 		String ret = word;
 		if (word.endsWith("s")) {
 			int len = word.length();
@@ -87,62 +92,9 @@ public abstract class IndexerCommon extends Indexer {
 				ret = (len - 2 < 0) ? "" : word.substring(0, len - 2);
 		}
 		return ret;
-	}
-
-	/**
-	 * Read HTML <body> ... </body>
-	 * 
-	 */
-	public String retrieveContent(File file) {
-		Scanner scanner;
-		String content = "";
-		try {
-			System.out.println(file.getName());
-			scanner = new Scanner(file);
-			CharSequence csBodyStart = "<body", csBodyEnd = "</body>";
-			boolean readBodyFlag = false;
-			while (scanner.hasNextLine()) {
-				String line = scanner.nextLine();
-				if (readBodyFlag || line.contains(csBodyStart)) {
-					content += line;
-					readBodyFlag = true;
-					if (line.contains(csBodyEnd))
-						readBodyFlag = false;
-				}
-			}
-			scanner.close();
-		} catch (FileNotFoundException ffe) {
-			System.err.println(ffe.getMessage());
-		}
-		return content;
-	}
-
-	/**
-	 * remove Non-visible page content, e.g., <script>
-	 */
-	public String removeNonVisible(String content) {
-		String ans = content;
-		// remove <script> ... </script>
-		int start, end;
-		while ((start = ans.indexOf("<script")) != -1) {
-			if ((end = ans.indexOf("</script>")) != -1) {
-				ans = ans.substring(0, start - 1) + ans.substring(end + 9);
-			} else
-				break;
-		}
-
-		// remove other < ... >
-		StringBuffer sb = new StringBuffer();
-		boolean readFlag = true;
-		for (int i = 0; i < ans.length(); i++) {
-			char ch = ans.charAt(i);
-			if (ch == '<')
-				readFlag = false;
-			else if (ch == '>')
-				readFlag = true;
-			else if (readFlag)
-				sb.append(ch);
-		}
-		return sb.toString();
+		*/
+		_stemmer.setCurrent(word);
+		_stemmer.stem();
+		return _stemmer.getCurrent();
 	}
 }

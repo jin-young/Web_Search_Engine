@@ -1,6 +1,10 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -9,48 +13,72 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class IndexerInvertedCompressed extends Indexer {
 
-  public IndexerInvertedCompressed(Options options) {
-    super(options);
-    System.out.println("Using Indexer: " + this.getClass().getSimpleName());
-  }
+	public IndexerInvertedCompressed(Options options) {
+		super(options);
+		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
+	}
+	
+	private int _prevDocId = 0;
 
-  @Override
-  public void constructIndex() throws IOException {
-  }
+	@Override
+	public void constructIndex() throws IOException {
+		
+	}
+	
+	private void makeIndex(String content, int docId) {
+		// Use Delta Encoding with v-bytes
+		int deltaDocId = docId - _prevDocId;
+		
+		Scanner s = new Scanner(content); // Uses white space by default.
+		
+		while (s.hasNext()) {
+			//String token = porterAlg(s.next());
+			_stemmer.setCurrent(s.next());
+			_stemmer.stem();
+			String token = _stemmer.getCurrent();
 
-  @Override
-  public void loadIndex() throws IOException, ClassNotFoundException {
-  }
+			//....... need more!!!
+		}
+		
+		s.close();
+		
+		_prevDocId = docId;
+	}
 
-  @Override
-  public Document getDoc(int docid) {
-    SearchEngine.Check(false, "Do NOT change, not used for this Indexer!");
-    return null;
-  }
+	@Override
+	public Document getDoc(int docid) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-  /**
-   * In HW2, you should be using {@link DocumentIndexed}
-   */
-  @Override
-  public Document nextDoc(Query query, int docid) {
-    return null;
-  }
+	@Override
+	public Document nextDoc(Query query, int docid) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-  @Override
-  public int corpusDocFrequencyByTerm(String term) {
-    return 0;
-  }
+	@Override
+	public void loadIndex() throws IOException, ClassNotFoundException {
+		// TODO Auto-generated method stub
 
-  @Override
-  public int corpusTermFrequency(String term) {
-    return 0;
-  }
+	}
 
-  /**
-   * @CS2580: Implement this for bonus points.
-   */
-  @Override
-  public int documentTermFrequency(String term, String url) {
-    return 0;
-  }
+	@Override
+	public int corpusDocFrequencyByTerm(String term) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int corpusTermFrequency(String term) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int documentTermFrequency(String term, String url) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
