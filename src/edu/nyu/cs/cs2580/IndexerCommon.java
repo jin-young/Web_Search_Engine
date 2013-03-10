@@ -4,15 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.Vector;
-
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
-	
-	// Stores all Document in memory.
-	public Vector<Document> _documents = new Vector<Document>();
 
 	public IndexerCommon(Options options) {
 		super(options);
