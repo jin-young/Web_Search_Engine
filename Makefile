@@ -1,7 +1,13 @@
 all: compile
 
+SOURCES:=find ./src -name "*.java"
+
 compile:
-	javac src/edu/nyu/cs/cs2580/*.java
+	javac -cp ./src $$($(SOURCES))
+
+buildindex:
+	java -cp src edu.nyu.cs.cs2580.SearchEngine \
+--mode=index --options=conf/engine.conf
 
 clean:
-	rm -rf src/edu/nyu/cs/cs2580/*.class
+	find ./src -type f -name "*.class" -delete
