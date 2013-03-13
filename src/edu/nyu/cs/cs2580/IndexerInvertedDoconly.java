@@ -7,8 +7,11 @@ import java.io.ObjectOutputStream;
 import java.io.IOException;
 import java.util.Vector;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Scanner;
+import java.util.Iterator;
 import java.io.File;
 import java.io.FileNotFoundException;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -19,11 +22,10 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class IndexerInvertedDoconly extends IndexerCommon {
     // Maps each term to their integer representation
     private Map<String, Integer> _dictionary 
-	= new HashMap<String, Integer>();
+	= new TreeMap<String, Integer>();
 
     private Map<Integer, Integer> _cachedIndex
     = new HashMap<Integer, Integer>();
-    
     
     // Inverted Index, key is the integer representation of the term and value
     // is the id list of document which appear this term.
@@ -49,7 +51,8 @@ public class IndexerInvertedDoconly extends IndexerCommon {
      * @param did
      */
     @Override
-    public void makeIndex(String content, int did) {
+    public void makeIndex(String content, int did){
+	
 	Scanner s = new Scanner(content); // Uses white space by default.
 	while (s.hasNext()) {
 	    String token = porterAlg( s.next() );
@@ -72,9 +75,69 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	    ++_totalTermFrequency;
 	}
 	s.close();
+	
+	// write to file
+	if((did+1)%1000 == 1){
+	    try{
+		writeToFile();
+	    }catch(IOException ie){
+		System.err.println(ie.getMessage());
+	    }catch(ClassNotFoundException ce){
+		System.err.println(ce.getMessage());
+	    }
+	}
 	return;
     }
 
+    // Wirte memory data into file
+    // after 1000 documents processing, it saved in one file
+    @Override	 
+	public void writeToFile() throws IOException, ClassNotFoundException{
+	if(_index.isEmpty())
+	    return;
+
+	for(int i=0; i<27; i++){
+	    // Read corpus file
+	    String indexFile = _options._indexPrefix + "/corpus_";
+	    if(i < 26)
+		indexFile += (char)('a'+i) + ".idx";
+	    else
+		indexFile += "0.idx";
+	    ObjectInputStream reader 
+		= new ObjectInputStream(new FileInputStream(indexFile));
+	   
+	    Map<Integer, Vector<Integer>> _tmpIndex
+		= (HashMap<Integer, Vector<Integer>>) reader.readObject();
+	    reader.close();
+
+	    // processing
+	    Iterator it = _dictionary.keySet().iterator(); 
+	    while (it.hasNext()) { 
+		String key = (String)it.next();
+		if(key.charAt(0) != (char)('a'+i) && i != 26)
+		    break;
+		int keyId = _dictionary.get(key);
+		// look at this key is exist on the _index
+		if(_index.containsKey( keyId )){
+		    // If there are no this key in the file
+		    if(!_tmpIndex.containsKey(keyId)){
+			Vector<Integer> docList 
+			    = new Vector<Integer>();
+			_tmpIndex.put(keyId, docList);
+		    }
+		    _tmpIndex.get(keyId).addAll( _index.get(keyId) );
+		    _index.remove(keyId); 
+		}
+	    }
+	    // write corpus file
+	    ObjectOutputStream writer = new ObjectOutputStream(
+					   new FileOutputStream(indexFile));
+	    writer.writeObject(_tmpIndex);
+	    writer.close();
+	}
+    }
+
+    // It should be changed!!!
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
 	String indexFile = _options._indexPrefix + "/corpus.idx";
@@ -106,8 +169,7 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 
     @Override
     public Document getDoc(int docid) {
-	SearchEngine.Check(false, "Do NOT change, not used for this Indexer!");
-	return null;
+	return _documents.get(docid);
     }
 
     /**
@@ -117,20 +179,20 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     public Document nextDoc(Query query, int docid) {
     	Vector<Integer> docs = new Vector<Integer>();
     	int doc;
-    	
-    	for(int i=0; i<query._tokens.size();i++){//find next document for each query
-    		doc=next(query._tokens.get(i),docid);
-    		if(doc!=-1)
-    			docs.add(doc);
+
+    	//find next document for each query
+    	for(int i=0; i<query._tokens.size();i++){
+	    doc=next(query._tokens.get(i),docid);
+	    if(doc!=-1)
+		docs.add(doc);
     	}
     	
-    	
     	if(docs.size()<query._tokens.size())//no more document
-    		return null;
+	    return null;
     	if (equal(docs))//found!
-    		return _documents.get(docs.get(0));
+	    return _documents.get(docs.get(0));
     	//search next
-    		return nextDoc(query,Max(docs)-1);
+	return nextDoc(query,Max(docs)-1);
     }
     
     //galloping search
@@ -143,13 +205,15 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     		_cachedIndex.put(key, 1);
     		return _index.get(key).firstElement();    		
     	}
-    	if(_cachedIndex.get(key)>1&&_index.get(key).get(_cachedIndex.get(key)-1)<=docid)
+    	if(_cachedIndex.get(key)>1
+	   &&_index.get(key).get(_cachedIndex.get(key)-1)<=docid)
     		low=_cachedIndex.get(key)-1;
     	else
     		low=1;
     	jump=1;
     	high=low+jump;
-    	while(high<_index.get(key).lastElement()&&_index.get(key).get(high)<=docid){
+    	while(high<_index.get(key).lastElement()
+	      &&_index.get(key).get(high)<=docid){
     		low=high;
     		jump=2*jump;
     		high=low+jump;
@@ -183,22 +247,22 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     	}
     	return high;
     }
-    
+        
     private boolean equal(Vector<Integer> docs){
-    	boolean result=true;
     	int docid=docs.get(0);
     	for(int i=1;i<docs.size();i++){
-    		if(docs.get(i)!=docid)
-    			result=false;
+	    if(docs.get(i)!=docid){
+		return false;
+	    }
     	}
-    	return result;
+    	return true;
     }
     
     private int Max(Vector<Integer> docs){
     	int max=0;
     	for(int i=0;i<docs.size();i++){
-    		if(docs.get(i)>max)
-    			max=docs.get(i);
+	    if(docs.get(i)>max)
+		max=docs.get(i);
     	}
     	return max;
     }

@@ -20,28 +20,31 @@ public abstract class IndexerCommon extends Indexer {
 
 	@Override
 	public void constructIndex() throws IOException {
-
-		// Get All Files list in the Corpus Folder (data/wiki)
-		File folder = new File(_options._corpusPrefix);
-		File[] listOfFiles = folder.listFiles();
-
-		for (File file : listOfFiles) {
-			if (file.isFile()) {
-				processDocument(file);
-			}
-		}
-
-		System.out.println("Indexed " + Integer.toString(_numDocs)
-				+ " docs with " + Long.toString(_totalTermFrequency)
-				+ " terms.");
-
-		String indexFile = _options._indexPrefix + "/corpus.idx";
-		System.out.println("Store index to: " + indexFile);
+	    // make corpus files
+	    for(int i=0; i<27; i++){
+		String indexFile = _options._indexPrefix + "/corpus_";
+		if(i < 26)
+		    indexFile += (char)('a'+i) + ".idx";
+		else
+		    indexFile += "0.idx";
 		ObjectOutputStream writer = new ObjectOutputStream(
-				new FileOutputStream(indexFile));
-		writer.writeObject(this);
+					   new FileOutputStream(indexFile));
 		writer.close();
+	    }
+	    // Get All Files list in the Corpus Folder (data/wiki)
+	    File folder = new File(_options._corpusPrefix);
+	    File[] listOfFiles = folder.listFiles();
 
+	    for (File file : listOfFiles) {
+		if (file.isFile()) {
+		    processDocument(file);
+		}
+	    }
+	    try{
+		writeToFile();
+	    }catch(ClassNotFoundException e){
+		System.err.println();
+	    }
 	}
 
 	/**
@@ -87,6 +90,12 @@ public abstract class IndexerCommon extends Indexer {
 			System.exit(1);
 		}
 	}
+
+        /**
+         * After 1000 document reading, input _index into file 
+         * to flush memory
+         **/
+        public abstract void writeToFile() throws IOException, ClassNotFoundException;
 
 	/**
 	 * Make Index with content string of html.
