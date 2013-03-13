@@ -23,7 +23,6 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class IndexerInvertedOccurrence extends IndexerCommon implements Serializable{
     private static final long serialVersionUID = 1077111905740085030L;
-    private static final int MAXCORPUS = 30;
 
     // Inverted Index, 
     //      key is the integer representation of the term 
@@ -131,16 +130,6 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements Serializ
 	}
 	s.close();
 	
-	// write to file
-	if(did>=1000 && (did+1)%1000 == 1){
-	    try{
-		writeToFile();
-	    }catch(IOException ie){
-		System.err.println(ie.getMessage());
-	    }catch(ClassNotFoundException ce){
-		System.err.println(ce.getMessage());
-	    }
-	}
 	return tokenSize;
     }
 
