@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.Scanner;
 import java.util.Iterator;
+import java.util.Collections;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
@@ -23,8 +24,6 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class IndexerInvertedDoconly extends IndexerCommon implements Serializable{
     private static final long serialVersionUID = 1077111905740085031L;
     private static final int MAXCORPUS = 50;
-    // Back-up vairable of Indexer class to write dictionary file.
-    protected Map<String, Integer> t_dictionary;
 
     private Map<Integer, Integer> _cachedIndex
 	= new HashMap<Integer, Integer>();
@@ -68,7 +67,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	ObjectOutputStream writer = new ObjectOutputStream(
 				   new FileOutputStream(dicFile));
 	// back-up variables from Indexer class
-	//t_dictionary = _dictionary;
 	writer.writeObject(_dictionary);
 	writer.close();
     }
@@ -114,7 +112,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 		Vector<Integer> docList = new Vector<Integer>();
 		docList.add(did);
 		_index.put(idx, docList);
-		_cachedIndex.put(idx, 0);
 	    }
 	    ++_totalTermFrequency;
 	    tokenSize++;
@@ -223,20 +220,22 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	String dicFile = _options._indexPrefix + "/dictionary.idx";
 	reader = new ObjectInputStream(new FileInputStream(dicFile));
 	_dictionary = (TreeMap<String, Integer>) reader.readObject();
+	reader.close();
 	System.out.println("Load dictionary from: " + dicFile);
 
-
+	// Load Class Variables
 	/*
-	  IndexerInvertedDoconly loaded
+	String indexFile = _options._indexPrefix + "/corpus.idx";
+	reader = new ObjectInputStream(new FileInputStream(indexFile));
+	IndexerInvertedDoconly loaded
 	    = (IndexerInvertedDoconly) reader.readObject();
+	System.out.println("Load corpus from: " + indexFile);
 	*/
-		
+	
 	// Compute numDocs and totalTermFrequency b/c Indexer is not
 	// serializable.
 	this._numDocs = _documents.size();
-	/*
-	this._cachedIndex = loaded._cachedIndex;
-	*/
+
 	reader.close();
 
 	System.out.println(Integer.toString(_numDocs) + " documents loaded "
@@ -254,70 +253,113 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
      */
     @Override
     public Document nextDoc(Query query, int docid) {
+
     	Vector<Integer> docs = new Vector<Integer>();
-    	int doc;
+    	int doc = -1;
 
     	//find next document for each query
     	for(int i=0; i<query._tokens.size(); i++){
-	    doc = next(query._tokens.get(i), docid);
+	    try{
+		doc = next(query._tokens.get(i), docid);
+		System.out.println("nextDoc : doc result : " + doc);
+	    }catch(IOException ie){
+		System.err.println(ie.getMessage());
+	    }catch(ClassNotFoundException ce){
+		System.err.println(ce.getMessage());
+	    }
 	    if(doc != -1)
 		docs.add(doc);
     	}
-    	
+    		
 	//no more document
-    	if(docs.size() < query._tokens.size())
+    	if(docs.size() < query._tokens.size()){
+	    System.out.println("return null");
 	    return null;
-
+	}
+	
 	//found!
-    	if (equal(docs))
+    	if (equal(docs)){
 	    return _documents.get(docs.get(0));
-
+	}
+	
     	//search next
-	return nextDoc(query,Max(docs)-1);
+	return nextDoc(query, Max(docs)-1);
     }
     
     //galloping search
-    private int next(String word, int docid){
-	System.out.println("enter next : " + word + " : " + docid);
-	System.out.println("dictionary size : " + _dictionary.size());
-	System.out.println("cachedIndex size : " + _cachedIndex.size());
-	System.out.println("totalTermFrequency : " + _totalTermFrequency);
+    private int next(String word, int current) 
+	throws IOException, ClassNotFoundException{
+
+	System.out.println("Next start : current " + current);
 
     	int low, high, jump;
-    	int key = _dictionary.get(word);
+    	int idx = _dictionary.get(word);
+	Vector<Integer> docList = getDocList(idx);
+	int lt = docList.size()-1;
 
-	System.out.println("key : " + key);
+    	if(docList.size()<=1 || docList.lastElement() <= current){
+	    System.out.println("doc list size : " + docList.size());
+	    System.out.println("last element : " + docList.lastElement());
+	    System.out.println("current : " + current);
+	    return -1;
+	}
 
-    	if(!_index.containsKey(key) || _index.get(key).lastElement() <= docid)
-    		return -1;
-
-    	if(_index.get(key).firstElement() > docid){
-    		_cachedIndex.put(key, 1);
-    		return _index.get(key).firstElement();    		
+    	if(docList.firstElement() > current){
+	    System.out.println("next step1");
+	    _cachedIndex.put(idx, 1);
+	    return docList.firstElement();    		
     	}
 
-    	if(_cachedIndex.get(key) > 1
-	   && _index.get(key).get(_cachedIndex.get(key)-1) <= docid)
-    		low = _cachedIndex.get(key)-1;
-    	else
-    		low = 1;
+    	if(_cachedIndex.containsKey(idx) && _cachedIndex.get(idx) > 1
+	   && docList.get(_cachedIndex.get(idx)-1) <= current){
+	    System.out.println("next step2");
+	    low = _cachedIndex.get(idx)-1;
+    	}else
+	    low = 1;
 
     	jump = 1;
     	high = low + jump;
-    	while(high < _index.get(key).lastElement()
-	      && _index.get(key).get(high) <= docid){
-    		low = high;
-    		jump = 2*jump;
-    		high = low+jump;
+    	while(high < lt && docList.get(high) <= current){
+	    System.out.println("next step3");
+	    low = high;
+	    jump = 2 * jump;
+	    high = low + jump;
     	}
 
-    	if(high > _index.get(key).lastElement())
-    		high = _index.get(key).lastElement();
+    	if(high > lt)
+	    high = lt;
 
-    	_cachedIndex.put(key, binarySearch(key,low,high,docid));    	
-    	return _index.get(key).get(_cachedIndex.get(key));
+	_cachedIndex.put(idx, binarySearch(docList, low, high, current));
+	return docList.get(_cachedIndex.get(idx));
     }
     
+    /**
+     * Read Corpus file related with idx
+     * retrieve the document list of idx
+     * @return Vector<Integer> Document List
+     **/
+    private Vector<Integer> getDocList(int idx) 
+	throws IOException, ClassNotFoundException{
+	
+	int pageNum = idx % MAXCORPUS;
+
+	// Read corpus file
+	String indexFile = _options._indexPrefix + "/corpus_"+pageNum+".idx";
+	ObjectInputStream reader 
+	    = new ObjectInputStream(new FileInputStream(indexFile));
+	Map<Integer, Vector<Integer>> _tmpIndex
+	    = (HashMap<Integer, Vector<Integer>>) reader.readObject();
+	reader.close();
+	
+	if(!_tmpIndex.containsKey(idx))
+	    return new Vector<Integer>();
+	else{
+	    Vector<Integer> docList = _tmpIndex.get(idx);
+	    Collections.sort(docList);
+	    return docList;
+	}
+    }
+
     /*
     //binary search
     private int next(String word, int docid){
@@ -330,11 +372,12 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     	
     }
     */
-    private int binarySearch(int key, int low, int high, int docid){
+    private int binarySearch(Vector<Integer> docList, 
+			     int low, int high, int current){
     	int mid;
     	while(high - low > 1){
-	    mid = (int) Math.floor((low+high) / 2);
-	    if(_index.get(key).get(mid) <= docid)
+	    mid = (int)((low+high) / 2.0);
+	    if(docList.get(mid) <= current)
 		low = mid;
 	    else
 		high = mid;

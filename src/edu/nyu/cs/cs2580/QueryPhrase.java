@@ -13,5 +13,6 @@ public class QueryPhrase extends Query {
 
   @Override
   public void processQuery() {
+      
   }
 }

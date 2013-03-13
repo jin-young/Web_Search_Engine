@@ -58,29 +58,29 @@ public abstract class Ranker {
      * provided {@code arguments}.
      */
     public static class Factory {
-	public static Ranker getRankerByArguments(CgiArguments arguments,
-						  Options options, Indexer indexer) {
-	    switch (arguments._rankerType) {
-	    case FULLSCAN:
-		return new RankerFullScan(options, arguments, indexer);
-	    case CONJUNCTIVE:
-		return new RankerConjunctive(options, arguments, indexer);
-	    case FAVORITE:
-		return new RankerFavorite(options, arguments, indexer);
-	    case COSINE:
-		return new RankerCosine(options, arguments, indexer);
-	    case QL:
-		return new RankerQL(options, arguments, indexer);
-	    case PHRASE:
-		return new RankerPhrase(options, arguments, indexer);
-	    case LINEAR:
-		return new RankerLinear(options, arguments, indexer);
-	    case NONE:
-		// Fall through intended
-	    default:
-		// Do nothing.
-	    }
-	    return null;
+		public static Ranker getRankerByArguments(CgiArguments arguments,
+												  Options options, Indexer indexer) {
+			switch (arguments._rankerType) {
+			case FULLSCAN:
+				return new RankerFullScan(options, arguments, indexer);
+			case CONJUNCTIVE:
+				return new RankerConjunctive(options, arguments, indexer);
+			case FAVORITE:
+				return new RankerFavorite(options, arguments, indexer);
+			case COSINE:
+				return new RankerCosine(options, arguments, indexer);
+			case QL:
+				return new RankerQL(options, arguments, indexer);
+			case PHRASE:
+				return new RankerPhrase(options, arguments, indexer);
+			case LINEAR:
+				return new RankerLinear(options, arguments, indexer);
+			case NONE:
+				// Fall through intended
+			default:
+				// Do nothing.
+			}
+			return null;
+		}
 	}
-    }
 }

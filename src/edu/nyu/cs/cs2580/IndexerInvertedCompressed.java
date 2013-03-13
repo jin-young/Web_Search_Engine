@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.TreeMap;
+import java.io.Serializable;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
@@ -27,7 +28,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable {
 	private static final long serialVersionUID = 6104700553407520025L;
 	
 	private Map<Integer, ArrayList<Short>> _index;
-    private Map<Integer, ArrayList<Integer>> _skipPointer;
+        private Map<Integer, ArrayList<Integer>> _skipPointer;
 	
 	public IndexerInvertedCompressed(Options options) {
 		super(options);

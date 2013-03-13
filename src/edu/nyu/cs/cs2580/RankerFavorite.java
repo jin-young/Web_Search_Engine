@@ -15,82 +15,73 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class RankerFavorite extends Ranker {
 
-	public RankerFavorite(Options options,
-						  CgiArguments arguments, Indexer indexer) {
-		super(options, arguments, indexer);
-		System.out.println("Using Ranker: " + this.getClass().getSimpleName());
-	}
-
-	@Override
-	public Vector<ScoredDocument> runQuery(Query query, int numResults) {
-		Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();
-		Document doc = null;
-		int docid = -1;
-		while ((doc = _indexer.nextDoc(query, docid)) != null) {
-			rankQueue.add(scoreDocument(query, doc));
-			if (rankQueue.size() > numResults) {    // Jinil : I'm not sure, is this possible without score?
-				rankQueue.poll();
-			}
-			docid = doc._docid;
-		}
-
-		Vector<ScoredDocument> results = new Vector<ScoredDocument>();
-		ScoredDocument scoredDoc = null;
-		while ((scoredDoc = rankQueue.poll()) != null) {
-			results.add(scoredDoc);
-		}
-		Collections.sort(results, Collections.reverseOrder());
-		return results;
-	}
-
-    private ScoredDocument scoreDocument(Query query, Document doc) {
-		// Process the raw query into tokens.
-		query.processQuery();
-		double score = calScore(query, doc);
-		return new ScoredDocument(doc, score);
+    public RankerFavorite(Options options,
+			  CgiArguments arguments, Indexer indexer) {
+	super(options, arguments, indexer);
+	System.out.println("Using Ranker: " + this.getClass().getSimpleName());
     }
 
-    public double calScore(Query query, Document doc){
-		double score = 0.0;
-		Vector<String> docTokens = ((DocumentFull) doc).getConvertedTitleTokens();
-		// Variables
-		double sumWeight=0.0, sumWeight2=0.0;
-		Vector<Double> _weights = new Vector<Double>();
-	
-		// Score the document.
-		for(String queryToken : query._tokens){
-			double tf = _indexer.documentTermFrequency(queryToken, doc.getUrl());
-			double n = _indexer.numDocs();
-			double dt = _indexer.corpusDocFrequencyByTerm(queryToken);
-			double idf = 1 + (Math.log(n/dt) / Math.log(2));
-			double weight = (double)tf * idf;
-			_weights.add(weight);
-		}
-		normalize(_weights);
-	
-		for(int i=0; i<_weights.size(); i++){
-			sumWeight += _weights.get(i);
-			sumWeight2 += _weights.get(i) * _weights.get(i); 
-		}
+    @Override
+    public Vector<ScoredDocument> runQuery(Query query, int numResults) {
+	Vector<ScoredDocument> rankList = new Vector<ScoredDocument>();
+	Vector<DocumentIndexed> docList = new Vector<DocumentIndexed>();
 
-		if(sumWeight == 0.0)  
-			score = 0.0;
-		else
-			score = sumWeight / Math.sqrt(sumWeight2 
-										  * (double)query._tokens.size());	    
-		return score;
+	DocumentIndexed doc = null;
+	int docid = -1;
+	while ((doc = (DocumentIndexed)_indexer.nextDoc(query, docid)) != null) {
+	    if(!docList.contains(doc)){
+		rankList.add(scoreDocument(query, doc));
+		docList.add(doc);
+	    }
+
+	    if (rankList.size() > numResults) {    
+		double minValue = rankList.get(0).getScore();
+		int id = 0;
+		for(int i=1; i<rankList.size(); i++){
+		    if(rankList.get(i).getScore() < minValue){
+			minValue = rankList.get(i).getScore();
+			id = i;
+		    }
+		}
+		rankList.remove(id);
+		docList.remove(id);
+	    }
+	    docid = doc._docid;
+	}
+
+	Vector<ScoredDocument> results = new Vector<ScoredDocument>();
+	ScoredDocument scoredDoc = null;
+	for(int i=0; i<rankList.size(); i++){
+	    results.add(rankList.get(i));
+	}
+	Collections.sort(results, Collections.reverseOrder());
+	return results;
     }
 
-    public void normalize(Vector<Double> _weights){
-		double sum = 0.0;
-		for(int i=0; i<_weights.size(); i++)
-			sum += _weights.get(i) * _weights.get(i);
-		if(sum==0)  return;
-		sum = Math.sqrt(sum);
-		for(int i=0; i<_weights.size(); i++){
-			double newWeight = _weights.get(i)/sum;
-			_weights.set(i, newWeight);
-		}
+    private ScoredDocument scoreDocument(Query query, DocumentIndexed doc) {
+	// Process the raw query into tokens.
+	query.processQuery();
+	double score = calScore(query, doc);
+	return new ScoredDocument(doc, score);
+    }
+
+    public double calScore(Query query, DocumentIndexed doc){
+	double score=1.0, lambda=0.50;
+	//Vector<String> docTokens = ((DocumentFull) doc).getConvertedTitleTokens();
+	//docTokens.addAll( ((DocumentFull) doc).getConvertedBodyTokens() );
+	int docTokenSize = doc.getTokenSize();
+	
+	// Score the document.
+	for(String queryToken : query._tokens){
+	    score *= ((1-lambda)
+		      *(_indexer.documentTermFrequency(queryToken, doc.getUrl())
+			/ (double)docTokenSize)
+		      + 
+		      (lambda)
+		      *((double)_indexer.corpusTermFrequency(queryToken)
+			/ (double)_indexer.totalTermFrequency()));
+	}
+	return score;
     }
 }
 

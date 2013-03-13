@@ -19,7 +19,7 @@ class RankerQL extends Ranker {
     }
 
     @Override
-	public Vector<ScoredDocument> runQuery(Query query, int numResults) {    
+    public Vector<ScoredDocument> runQuery(Query query, int numResults) {    
 	Vector<ScoredDocument> all = new Vector<ScoredDocument>();
 	for (int i = 0; i < _indexer.numDocs(); ++i) {
 	    all.add(scoreDocument(query, i));
