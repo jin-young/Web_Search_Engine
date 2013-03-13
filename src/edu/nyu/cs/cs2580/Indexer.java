@@ -5,7 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Scanner;
 import java.util.Vector;
-
+import java.util.Map;
+import java.util.TreeMap;
 import org.tartarus.snowball.SnowballStemmer;
 import org.tartarus.snowball.ext.englishStemmer;
 
@@ -30,6 +31,10 @@ public abstract class Indexer {
 	protected static SnowballStemmer _stemmer = new englishStemmer();
 	// Stores all Document in memory
 	protected Vector<Document> _documents = new Vector<Document>();
+    
+        // Maps each term to their integer representation
+        protected Map<String, Integer> _dictionary 
+	    = new TreeMap<String, Integer>();
 
 	// Options to configure each concrete Indexer, do not serialize.
 	protected Options _options = null;

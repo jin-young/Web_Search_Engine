@@ -27,13 +27,11 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable {
 	private static final long serialVersionUID = 6104700553407520025L;
 	
 	private Map<Integer, ArrayList<Short>> _index;
-    private Map<String, Integer> _dictionary;
     private Map<Integer, ArrayList<Integer>> _skipPointer;
 	
 	public IndexerInvertedCompressed(Options options) {
 		super(options);
 		_index = new TreeMap<Integer, ArrayList<Short>>();
-		_dictionary = new HashMap<String, Integer>();
 		_skipPointer = new HashMap<Integer, ArrayList<Integer>>();
 		
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());

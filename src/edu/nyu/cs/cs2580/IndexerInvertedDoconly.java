@@ -9,7 +9,6 @@ import java.util.Vector;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.Scanner;
 import java.util.Iterator;
 import java.io.File;
@@ -20,9 +19,6 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW2.
  */
 public class IndexerInvertedDoconly extends IndexerCommon {
-    // Maps each term to their integer representation
-    private Map<String, Integer> _dictionary 
-	= new TreeMap<String, Integer>();
 
     private Map<Integer, Integer> _cachedIndex
 	= new HashMap<Integer, Integer>();
