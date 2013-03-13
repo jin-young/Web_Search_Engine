@@ -23,20 +23,9 @@ public abstract class IndexerCommon extends Indexer {
 
     @Override
     public void constructIndex() throws IOException {
-	// make corpus files
-	for(int i=0; i<27; i++){
-	    String indexFile = _options._indexPrefix + "/corpus_";
-	    if(i < 26)
-		indexFile += (char)('a'+i) + ".idx";
-	    else
-		indexFile += "0.idx";
-	    ObjectOutputStream writer = new ObjectOutputStream(
-				       new FileOutputStream(indexFile));
-	    Map<Integer, Vector<Integer>> _tmpIndex 
-		= new HashMap<Integer, Vector<Integer>>();
-	    writer.writeObject(_tmpIndex);
-	    writer.close();
-	}
+
+	makeCorpusFiles();
+
 	// Get All Files list in the Corpus Folder (data/wiki)
 	File folder = new File(_options._corpusPrefix);
 	File[] listOfFiles = folder.listFiles();
@@ -54,6 +43,11 @@ public abstract class IndexerCommon extends Indexer {
 	    System.err.println();
 	}
     }
+
+    /**
+     * Make New Corpus Files to save Index.
+     **/
+    public abstract void makeCorpusFiles() throws IOException;
 
     /**
      * Document processing must satisfy the following: 1) Non-visible page

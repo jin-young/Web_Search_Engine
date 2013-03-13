@@ -34,10 +34,27 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	= new HashMap<Integer, Integer>();
     // Stores only necessary information.
     private Vector<DocumentIndexed> _documents = new Vector<DocumentIndexed>();
-    
     public IndexerInvertedDoconly(Options options) {
 	super(options);
 	System.out.println("Using Indexer: " + this.getClass().getSimpleName());
+    }
+
+    @Override
+    public void makeCorpusFiles() throws IOException{
+	// make corpus files
+	for(int i=0; i<27; i++){
+	    String indexFile = _options._indexPrefix + "/corpus_";
+	    if(i < 26)
+		indexFile += (char)('a'+i) + ".idx";
+	    else
+		indexFile += "0.idx";
+	    ObjectOutputStream writer = new ObjectOutputStream(
+				       new FileOutputStream(indexFile));
+	    Map<Integer, Vector<Integer>> _tmpIndex 
+		= new HashMap<Integer, Vector<Integer>>();
+	    writer.writeObject(_tmpIndex);
+	    writer.close();
+	}
     }
 
     /**
@@ -48,7 +65,6 @@ public class IndexerInvertedDoconly extends IndexerCommon {
      */
     @Override
     public void makeIndex(String content, int did){
-	
 	Scanner s = new Scanner(content); // Uses white space by default.
 	while (s.hasNext()) {
 	    String token = porterAlg( s.next() );
@@ -114,7 +130,9 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	    Iterator it = _dictionary.keySet().iterator(); 
 	    while (it.hasNext()) { 
 		String key = (String)it.next();
-		if(key.charAt(0) == (char)('a'+i) || key.charAt(0) == (char)('A'+i) || i==26){
+		if(key.charAt(0) == (char)('a'+i) 
+		   || key.charAt(0) == (char)('A'+i) 
+		   || i == 26){
 		    int keyId = _dictionary.get(key);
 		    // look at this key is exist on the _index
 		    if(_index.containsKey( keyId )){
