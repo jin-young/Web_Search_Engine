@@ -25,7 +25,7 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	= new TreeMap<String, Integer>();
 
     private Map<Integer, Integer> _cachedIndex
-    = new HashMap<Integer, Integer>();
+	= new HashMap<Integer, Integer>();
     
     // Inverted Index, key is the integer representation of the term and value
     // is the id list of document which appear this term.
@@ -59,6 +59,10 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	    int idx = -1;
 	    if (_dictionary.containsKey(token)) {
 		idx = _dictionary.get(token);
+		if(!_index.containsKey(idx)){
+		    Vector<Integer> tmp = new Vector<Integer>();
+		    _index.put(idx, tmp);
+		}		    
 		Vector<Integer> docList = _index.get(idx);
 		if(!docList.contains(did))
 		    docList.add(did);
@@ -77,7 +81,7 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 	s.close();
 	
 	// write to file
-	if((did+1)%1000 == 1){
+	if(did>=1000 && (did+1)%1000 == 1){
 	    try{
 		writeToFile();
 	    }catch(IOException ie){
@@ -86,13 +90,12 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 		System.err.println(ce.getMessage());
 	    }
 	}
-	return;
     }
 
     // Wirte memory data into file
     // after 1000 documents processing, it saved in one file
     @Override	 
-	public void writeToFile() throws IOException, ClassNotFoundException{
+    public void writeToFile() throws IOException, ClassNotFoundException{
 	if(_index.isEmpty())
 	    return;
 
@@ -105,28 +108,29 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 		indexFile += "0.idx";
 	    ObjectInputStream reader 
 		= new ObjectInputStream(new FileInputStream(indexFile));
-	   
+
 	    Map<Integer, Vector<Integer>> _tmpIndex
 		= (HashMap<Integer, Vector<Integer>>) reader.readObject();
+
 	    reader.close();
 
 	    // processing
 	    Iterator it = _dictionary.keySet().iterator(); 
 	    while (it.hasNext()) { 
 		String key = (String)it.next();
-		if(key.charAt(0) != (char)('a'+i) && i != 26)
-		    break;
-		int keyId = _dictionary.get(key);
-		// look at this key is exist on the _index
-		if(_index.containsKey( keyId )){
-		    // If there are no this key in the file
-		    if(!_tmpIndex.containsKey(keyId)){
-			Vector<Integer> docList 
-			    = new Vector<Integer>();
-			_tmpIndex.put(keyId, docList);
+		if(key.charAt(0) == (char)('a'+i) || key.charAt(0) == (char)('A'+i) || i==26){
+		    int keyId = _dictionary.get(key);
+		    // look at this key is exist on the _index
+		    if(_index.containsKey( keyId )){
+			// If there are no this key in the file
+			if(!_tmpIndex.containsKey(keyId)){
+			    Vector<Integer> docList 
+				= new Vector<Integer>();
+			    _tmpIndex.put(keyId, docList);
+			}
+			_tmpIndex.get(keyId).addAll( _index.get(keyId) );
+			_index.remove(keyId); 
 		    }
-		    _tmpIndex.get(keyId).addAll( _index.get(keyId) );
-		    _index.remove(keyId); 
 		}
 	    }
 	    // write corpus file
