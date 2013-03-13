@@ -140,6 +140,7 @@ public abstract class Indexer {
 	 * Read HTML <body> ... </body>
 	 * 
 	 */
+	/*
 	public String retrieveContent(File file) {
 		Scanner scanner;
 		String content = "";
@@ -163,10 +164,11 @@ public abstract class Indexer {
 		}
 		return content;
 	}
-
+	*/
 	/**
 	 * remove Non-visible page content, e.g., <script>
 	 */
+	/*
 	public String removeNonVisible(String content) {
 		String ans = content;
 		// remove <script> ... </script>
@@ -192,6 +194,7 @@ public abstract class Indexer {
 		}
 		return sb.toString();
 	}
+	*/
 
 	/**
 	 * All Indexers must be created through this factory class based on the

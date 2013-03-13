@@ -10,6 +10,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Vector;
+import java.util.TreeMap;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -26,7 +32,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable {
 	
 	public IndexerInvertedCompressed(Options options) {
 		super(options);
-		_index = new HashMap<Integer, ArrayList<Short>>();
+		_index = new TreeMap<Integer, ArrayList<Short>>();
 		_dictionary = new HashMap<String, Integer>();
 		_skipPointer = new HashMap<Integer, ArrayList<Integer>>();
 		
@@ -65,16 +71,40 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable {
 	 * certain inverted list.
 	 */
 	private void processDocument(File file) {
-		String content = retrieveContent(file);
-		content = removeNonVisible(content);
-		
-		makeIndex(content, _numDocs);
+		int did = _documents.size();
+		try {
+			System.out.println(did +". " + file.getName());
+			org.jsoup.nodes.Element body = Jsoup.parse(file, "UTF-8", _options._corpusPrefix + "/" + file.getName()).body();
+			// Remove all script and style elements and those of class "hidden".
+			body.select("script, style, .hidden").remove();
 
-		DocumentIndexed doc = new DocumentIndexed(_numDocs);
-		doc.setTitle(file.getName());
-		doc.setUrl(_options._corpusPrefix + "/" + file.getName());
-		_documents.add(doc);
-		++_numDocs;
+			// Remove all style and event-handler attributes from all elements.
+			Elements all = body.select("*");
+			for (Element el : all) { 
+			  for (Attribute attr : el.attributes()) { 
+			    String attrKey = attr.getKey();
+			    if (attrKey.equals("style") || attrKey.startsWith("on")) { 
+			      el.removeAttr(attrKey);
+			    } 
+			  }
+			}
+			String content = body.text();
+			if(content.trim().length() > 0) {
+				makeIndex(content, did);
+			}
+//			String content = retrieveContent(file);
+//			content = removeNonVisible(content);
+	
+			DocumentIndexed doc = new DocumentIndexed(did);
+			doc.setTitle(file.getName());
+			doc.setUrl(_options._corpusPrefix + "/" + file.getName());
+			_documents.add(doc);
+			++_numDocs;
+		} catch (IOException e) {
+			System.err.println("Error Occurred while process document '" + file.getName() + "'");
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 	
 	// Use Delta Encoding with v-bytes
