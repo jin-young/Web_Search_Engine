@@ -43,7 +43,6 @@ public abstract class IndexerCommon extends Indexer {
 	try{
 	    writeToFile();
 	    mergeFile();
-	    writeDocToFile();
 	    writeDicToFile();
 	}catch(ClassNotFoundException e){
 	    System.err.println();
@@ -118,11 +117,6 @@ public abstract class IndexerCommon extends Indexer {
      * save _dictionary into file
      **/
     public abstract void writeDicToFile() throws IOException;
-
-    /**
-     * Save _documents into file
-     **/
-    public abstract void writeDocToFile() throws IOException;
 
 	/**
 	 * Make Index with content string of html.

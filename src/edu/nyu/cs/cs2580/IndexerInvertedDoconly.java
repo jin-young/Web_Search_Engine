@@ -23,7 +23,13 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class IndexerInvertedDoconly extends IndexerCommon implements Serializable{
     private static final long serialVersionUID = 1077111905740085031L;
-    private static final int MAXCORPUS = 50;
+    private static final int MAXCORPUS = 30;
+
+    // Back-up variables for serializable file write.
+    protected Vector<Document> t_documents;    
+    protected Map<String, Integer> t_dictionary; 
+    protected int t_numDocs;
+    protected long t_totalTermFrequency;
 
     private Map<Integer, Integer> _cachedIndex
 	= new HashMap<Integer, Integer>();
@@ -67,19 +73,13 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	ObjectOutputStream writer = new ObjectOutputStream(
 				   new FileOutputStream(dicFile));
 	// back-up variables from Indexer class
-	writer.writeObject(_dictionary);
-	writer.close();
-    }
+	t_documents = _documents;
+	t_dictionary = _dictionary;
+	t_numDocs = _numDocs;
+	t_totalTermFrequency = _totalTermFrequency;
 
-    /**
-     * Save _documents into file
-     **/
-    @Override
-    public void writeDocToFile() throws IOException{
-	String docFile = _options._indexPrefix + "/documents.idx";
-	ObjectOutputStream writer = new ObjectOutputStream(
-				   new FileOutputStream(docFile));
-	writer.writeObject(_documents);
+	//writer.writeObject(_dictionary);
+	writer.writeObject(this);
 	writer.close();
     }
 
@@ -208,6 +208,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
+	/*
 	// Load Documents file
 	String docFile = _options._indexPrefix + "/documents.idx";
 	ObjectInputStream reader 
@@ -215,13 +216,24 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	_documents = (Vector<Document>)reader.readObject();
 	reader.close();
 	System.out.println("Load documents from: " + docFile);	
+	*/
 
 	// Load Dictionary file
 	String dicFile = _options._indexPrefix + "/dictionary.idx";
-	reader = new ObjectInputStream(new FileInputStream(dicFile));
-	_dictionary = (TreeMap<String, Integer>) reader.readObject();
-	reader.close();
+	ObjectInputStream reader 
+	    = new ObjectInputStream(new FileInputStream(dicFile));
+	//_dictionary = (TreeMap<String, Integer>) reader.readObject();
 	System.out.println("Load dictionary from: " + dicFile);
+
+	IndexerInvertedDoconly loaded
+	    = (IndexerInvertedDoconly) reader.readObject();
+	
+	//this._numDocs = _documents.size();
+	this._documents = loaded.t_documents;
+	this._dictionary = loaded.t_dictionary;
+	this._numDocs = loaded.t_numDocs;
+	this._totalTermFrequency = loaded.t_totalTermFrequency;
+	
 
 	// Load Class Variables
 	/*
@@ -234,7 +246,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	
 	// Compute numDocs and totalTermFrequency b/c Indexer is not
 	// serializable.
-	this._numDocs = _documents.size();
+	
 
 	reader.close();
 
@@ -261,7 +273,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     	for(int i=0; i<query._tokens.size(); i++){
 	    try{
 		doc = next(query._tokens.get(i), docid);
-		System.out.println("nextDoc : doc result : " + doc);
 	    }catch(IOException ie){
 		System.err.println(ie.getMessage());
 	    }catch(ClassNotFoundException ce){
@@ -273,7 +284,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     		
 	//no more document
     	if(docs.size() < query._tokens.size()){
-	    System.out.println("return null");
 	    return null;
 	}
 	
@@ -290,29 +300,22 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     private int next(String word, int current) 
 	throws IOException, ClassNotFoundException{
 
-	System.out.println("Next start : current " + current);
-
     	int low, high, jump;
     	int idx = _dictionary.get(word);
 	Vector<Integer> docList = getDocList(idx);
 	int lt = docList.size()-1;
 
     	if(docList.size()<=1 || docList.lastElement() <= current){
-	    System.out.println("doc list size : " + docList.size());
-	    System.out.println("last element : " + docList.lastElement());
-	    System.out.println("current : " + current);
 	    return -1;
 	}
 
     	if(docList.firstElement() > current){
-	    System.out.println("next step1");
 	    _cachedIndex.put(idx, 1);
 	    return docList.firstElement();    		
     	}
 
     	if(_cachedIndex.containsKey(idx) && _cachedIndex.get(idx) > 1
 	   && docList.get(_cachedIndex.get(idx)-1) <= current){
-	    System.out.println("next step2");
 	    low = _cachedIndex.get(idx)-1;
     	}else
 	    low = 1;
@@ -320,7 +323,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     	jump = 1;
     	high = low + jump;
     	while(high < lt && docList.get(high) <= current){
-	    System.out.println("next step3");
 	    low = high;
 	    jump = 2 * jump;
 	    high = low + jump;
@@ -340,6 +342,9 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
      **/
     private Vector<Integer> getDocList(int idx) 
 	throws IOException, ClassNotFoundException{
+
+	if(_index.containsKey(idx))
+	    return _index.get(idx);
 	
 	int pageNum = idx % MAXCORPUS;
 
@@ -356,22 +361,11 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
 	else{
 	    Vector<Integer> docList = _tmpIndex.get(idx);
 	    Collections.sort(docList);
+	    _index.put(idx, docList);
 	    return docList;
 	}
     }
 
-    /*
-    //binary search
-    private int next(String word, int docid){
-    	int key=_dictionary.get(word);
-    	if(!_index.containsKey(key)||_index.get(key).lastElement()<=docid)
-    		return -1;
-    	if(_index.get(key).firstElement()>docid)
-    		return _index.get(key).firstElement();
-    	return _index.get(key).get(binarySearch(key,1,_index.size()-1,docid));
-    	
-    }
-    */
     private int binarySearch(Vector<Integer> docList, 
 			     int low, int high, int current){
     	int mid;
@@ -396,10 +390,10 @@ public class IndexerInvertedDoconly extends IndexerCommon implements Serializabl
     }
     
     private int Max(Vector<Integer> docs){
-    	int max=0;
-    	for(int i=0;i<docs.size();i++){
-	    if(docs.get(i)>max)
-		max=docs.get(i);
+    	int max = 0;
+    	for(int i=0; i<docs.size(); i++){
+	    if(docs.get(i) > max)
+		max = docs.get(i);
     	}
     	return max;
     }
