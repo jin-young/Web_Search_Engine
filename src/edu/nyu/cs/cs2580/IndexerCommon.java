@@ -16,7 +16,11 @@ import org.jsoup.select.Elements;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
-    
+    // Provided for serialization
+    public IndexerCommon(){
+    }
+
+    // The real constructor
     public IndexerCommon(Options options) {
 	super(options);
     }
@@ -38,6 +42,8 @@ public abstract class IndexerCommon extends Indexer {
 	
 	try{
 	    writeToFile();
+	    mergeFile();
+	    writeDocToFile();
 	    writeDicToFile();
 	}catch(ClassNotFoundException e){
 	    System.err.println();
@@ -76,8 +82,9 @@ public abstract class IndexerCommon extends Indexer {
 	    }
 
 	    String content = body.text();
+	    int tokenSize = 0;
 	    if(content.trim().length() > 0) {
-		makeIndex(content, did);
+		tokenSize = makeIndex(content, did);
 	    }
 	    //			String content = retrieveContent(file);
 	    //			content = removeNonVisible(content);
@@ -85,6 +92,7 @@ public abstract class IndexerCommon extends Indexer {
 	    DocumentIndexed doc = new DocumentIndexed(did);
 	    doc.setTitle(file.getName());
 	    doc.setUrl(_options._corpusPrefix + "/" + file.getName());
+	    doc.setTokenSize(tokenSize);
 	    _documents.add(doc);
 	    ++_numDocs;
 	} catch (IOException e) {
@@ -99,26 +107,31 @@ public abstract class IndexerCommon extends Indexer {
      * to flush memory
      **/
     public abstract void writeToFile() throws IOException, ClassNotFoundException;
-
+    
+    /**
+     * Merge Temporary files
+     **/
+    public abstract void mergeFile() throws IOException, ClassNotFoundException;
+    
     /**
      * After making index files,
      * save _dictionary into file
      **/
-    public void writeDicToFile() throws IOException{
-	String dicFile = _options._indexPrefix + "/dictionary.idx";
-	ObjectOutputStream writer = new ObjectOutputStream(
-				   new FileOutputStream(dicFile));
-	writer.writeObject(_dictionary);
-	writer.close();
-    }
+    public abstract void writeDicToFile() throws IOException;
+
+    /**
+     * Save _documents into file
+     **/
+    public abstract void writeDocToFile() throws IOException;
 
 	/**
 	 * Make Index with content string of html.
 	 * 
 	 * @param content
 	 * @param did
+	 * @return token size
 	 */
-	public abstract void makeIndex(String content, int did);
+	public abstract int makeIndex(String content, int did);
 
 	/**
 	 * Porter Algorithm : step1 remove plurals

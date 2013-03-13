@@ -9,16 +9,22 @@ import java.util.Vector;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Scanner;
 import java.util.Iterator;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 /**
  * @CS2580: Implement this class for HW2.
  */
-public class IndexerInvertedDoconly extends IndexerCommon {
+public class IndexerInvertedDoconly extends IndexerCommon implements Serializable{
+    private static final long serialVersionUID = 1077111905740085031L;
+    private static final int MAXCORPUS = 50;
+    // Back-up vairable of Indexer class to write dictionary file.
+    protected Map<String, Integer> t_dictionary;
 
     private Map<Integer, Integer> _cachedIndex
 	= new HashMap<Integer, Integer>();
@@ -28,12 +34,11 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     private Map<Integer, Vector<Integer>> _index
 	= new HashMap<Integer, Vector<Integer>>();
 
-    // Term frequency, key is the integer representation of the term and value
-    // is the number of times the term appears in the corpus.
-    private Map<Integer, Integer> _termCorpusFrequency 
-	= new HashMap<Integer, Integer>();
-    // Stores only necessary information.
-    private Vector<DocumentIndexed> _documents = new Vector<DocumentIndexed>();
+    // Provided for serialization
+    public IndexerInvertedDoconly(){
+    }
+
+    // The real constructor
     public IndexerInvertedDoconly(Options options) {
 	super(options);
 	System.out.println("Using Indexer: " + this.getClass().getSimpleName());
@@ -42,12 +47,8 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     @Override
     public void makeCorpusFiles() throws IOException{
 	// make corpus files
-	for(int i=0; i<27; i++){
-	    String indexFile = _options._indexPrefix + "/corpus_";
-	    if(i < 26)
-		indexFile += (char)('a'+i) + ".idx";
-	    else
-		indexFile += "0.idx";
+	for(int i=0; i<MAXCORPUS; i++){
+	    String indexFile = _options._indexPrefix + "/corpus_"+i+".idx";
 	    ObjectOutputStream writer = new ObjectOutputStream(
 				       new FileOutputStream(indexFile));
 	    Map<Integer, Vector<Integer>> _tmpIndex 
@@ -58,14 +59,43 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     }
 
     /**
+     * After making index files,
+     * save _dictionary into file
+     **/
+    @Override
+    public void writeDicToFile() throws IOException{
+	String dicFile = _options._indexPrefix + "/dictionary.idx";
+	ObjectOutputStream writer = new ObjectOutputStream(
+				   new FileOutputStream(dicFile));
+	// back-up variables from Indexer class
+	//t_dictionary = _dictionary;
+	writer.writeObject(_dictionary);
+	writer.close();
+    }
+
+    /**
+     * Save _documents into file
+     **/
+    @Override
+    public void writeDocToFile() throws IOException{
+	String docFile = _options._indexPrefix + "/documents.idx";
+	ObjectOutputStream writer = new ObjectOutputStream(
+				   new FileOutputStream(docFile));
+	writer.writeObject(_documents);
+	writer.close();
+    }
+
+    /**
      * Make Index with content string of html.
      *
      * @param content
      * @param did
+     * @return token size in document
      */
     @Override
-    public void makeIndex(String content, int did){
+    public int makeIndex(String content, int did){
 	Scanner s = new Scanner(content); // Uses white space by default.
+	int tokenSize = 0;
 	while (s.hasNext()) {
 	    String token = porterAlg( s.next() );
 	    int idx = -1;
@@ -85,10 +115,9 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 		docList.add(did);
 		_index.put(idx, docList);
 		_cachedIndex.put(idx, 0);
-		_termCorpusFrequency.put(idx, 0);
 	    }
-	    _termCorpusFrequency.put(idx, _termCorpusFrequency.get(idx)+1);
 	    ++_totalTermFrequency;
+	    tokenSize++;
 	}
 	s.close();
 	
@@ -102,82 +131,112 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 		System.err.println(ce.getMessage());
 	    }
 	}
+	return tokenSize;
     }
 
     // Wirte memory data into file
     // after 1000 documents processing, it saved in one file
+    private int tmpId = 0;
+
     @Override	 
     public void writeToFile() throws IOException, ClassNotFoundException{
 	if(_index.isEmpty())
 	    return;
+	String indexFile = _options._indexPrefix + "/tmp_" + tmpId;
+	ObjectOutputStream writer = new ObjectOutputStream(
+				   new FileOutputStream(indexFile));
+	writer.writeObject(_index);
+	_index.clear();
+	writer.close();
+	writer.flush();
+	tmpId++;
+    }
 
-	for(int i=0; i<27; i++){
-	    // Read corpus file
-	    String indexFile = _options._indexPrefix + "/corpus_";
-	    if(i < 26)
-		indexFile += (char)('a'+i) + ".idx";
-	    else
-		indexFile += "0.idx";
-	    ObjectInputStream reader 
-		= new ObjectInputStream(new FileInputStream(indexFile));
+    @Override
+    public void mergeFile() throws IOException, ClassNotFoundException{
+	File folder = new File(_options._indexPrefix);
+	File[] listOfFiles = folder.listFiles();
 
-	    Map<Integer, Vector<Integer>> _tmpIndex
-		= (HashMap<Integer, Vector<Integer>>) reader.readObject();
+	for (File file : listOfFiles) {
+	    if (file.isFile() && file.getName().contains("tmp_")) {
+		System.out.println("Open tmporary file : " + file.getName());
+		ObjectInputStream tmpFileReader 
+			= new ObjectInputStream(new FileInputStream(file));
+		_index = (HashMap<Integer, Vector<Integer>>) tmpFileReader.readObject();
+		tmpFileReader.close();
 
-	    reader.close();
+		for(int i=0; i<MAXCORPUS; i++){
+		    // Read corpus file
+		    String indexFile = _options._indexPrefix + "/corpus_"+i+".idx";
+		    ObjectInputStream reader 
+			= new ObjectInputStream(new FileInputStream(indexFile));
+		    System.out.println("Write " + indexFile);
 
-	    // processing
-	    Iterator it = _dictionary.keySet().iterator(); 
-	    while (it.hasNext()) { 
-		String key = (String)it.next();
-		if(key.charAt(0) == (char)('a'+i) 
-		   || key.charAt(0) == (char)('A'+i) 
-		   || i == 26){
-		    int keyId = _dictionary.get(key);
-		    // look at this key is exist on the _index
-		    if(_index.containsKey( keyId )){
-			// If there are no this key in the file
-			if(!_tmpIndex.containsKey(keyId)){
-			    Vector<Integer> docList 
-				= new Vector<Integer>();
-			    _tmpIndex.put(keyId, docList);
+		    Map<Integer, Vector<Integer>> _tmpIndex
+			= (HashMap<Integer, Vector<Integer>>) reader.readObject();
+
+		    reader.close();
+
+		    // processing
+		    Iterator it = _dictionary.keySet().iterator(); 
+		    while (it.hasNext()) { 
+			String key = (String)it.next();
+			int idx = _dictionary.get(key);
+			if(idx % MAXCORPUS == i){
+			    // look at this key is exist on the _index
+			    if(_index.containsKey(idx)){
+				// If there are no this key in the file
+				if(!_tmpIndex.containsKey(idx)){
+				    Vector<Integer> docList 
+					= new Vector<Integer>();
+				    _tmpIndex.put(idx, docList);
+				}
+				_tmpIndex.get(idx).addAll( _index.get(idx) );
+				_index.remove(idx); 
+			    }
 			}
-			_tmpIndex.get(keyId).addAll( _index.get(keyId) );
-			_index.remove(keyId); 
 		    }
+		    // write corpus file
+		    ObjectOutputStream writer = new ObjectOutputStream(
+					     new FileOutputStream(indexFile));
+		    writer.writeObject(_tmpIndex);
+		    writer.close();
+		    writer.flush();
+		    _tmpIndex.clear();
 		}
+		file.delete();
 	    }
-	    // write corpus file
-	    ObjectOutputStream writer = new ObjectOutputStream(
-					   new FileOutputStream(indexFile));
-	    writer.writeObject(_tmpIndex);
-	    writer.close();
 	}
     }
 
-    // It should be changed!!!
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
-	String indexFile = _options._indexPrefix + "/corpus.idx";
-	System.out.println("Load index from: " + indexFile);
-
+	// Load Documents file
+	String docFile = _options._indexPrefix + "/documents.idx";
 	ObjectInputStream reader 
-	    = new ObjectInputStream(new FileInputStream(indexFile));
+	    = new ObjectInputStream(new FileInputStream(docFile));
+	_documents = (Vector<Document>)reader.readObject();
+	reader.close();
+	System.out.println("Load documents from: " + docFile);	
 
-	IndexerInvertedDoconly loaded 
+	// Load Dictionary file
+	String dicFile = _options._indexPrefix + "/dictionary.idx";
+	reader = new ObjectInputStream(new FileInputStream(dicFile));
+	_dictionary = (TreeMap<String, Integer>) reader.readObject();
+	System.out.println("Load dictionary from: " + dicFile);
+
+
+	/*
+	  IndexerInvertedDoconly loaded
 	    = (IndexerInvertedDoconly) reader.readObject();
-
-	this._documents = loaded._documents;
-
+	*/
+		
 	// Compute numDocs and totalTermFrequency b/c Indexer is not
 	// serializable.
 	this._numDocs = _documents.size();
-	for (Integer freq : loaded._termCorpusFrequency.values()) {
-	    this._totalTermFrequency += freq;
-	}
-	this._index = loaded._index;
-	this._dictionary = loaded._dictionary;
-	this._termCorpusFrequency = loaded._termCorpusFrequency;
+	/*
+	this._cachedIndex = loaded._cachedIndex;
+	*/
 	reader.close();
 
 	System.out.println(Integer.toString(_numDocs) + " documents loaded "
@@ -199,50 +258,67 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     	int doc;
 
     	//find next document for each query
-    	for(int i=0; i<query._tokens.size();i++){
-	    doc=next(query._tokens.get(i),docid);
-	    if(doc!=-1)
+    	for(int i=0; i<query._tokens.size(); i++){
+	    doc = next(query._tokens.get(i), docid);
+	    if(doc != -1)
 		docs.add(doc);
     	}
     	
-    	if(docs.size()<query._tokens.size())//no more document
+	//no more document
+    	if(docs.size() < query._tokens.size())
 	    return null;
-    	if (equal(docs))//found!
+
+	//found!
+    	if (equal(docs))
 	    return _documents.get(docs.get(0));
+
     	//search next
 	return nextDoc(query,Max(docs)-1);
     }
     
     //galloping search
-    private int next2(String word, int docid){
+    private int next(String word, int docid){
+	System.out.println("enter next : " + word + " : " + docid);
+	System.out.println("dictionary size : " + _dictionary.size());
+	System.out.println("cachedIndex size : " + _cachedIndex.size());
+	System.out.println("totalTermFrequency : " + _totalTermFrequency);
+
     	int low, high, jump;
-    	int key=_dictionary.get(word);
-    	if(!_index.containsKey(key)||_index.get(key).lastElement()<=docid)
+    	int key = _dictionary.get(word);
+
+	System.out.println("key : " + key);
+
+    	if(!_index.containsKey(key) || _index.get(key).lastElement() <= docid)
     		return -1;
-    	if(_index.get(key).firstElement()>docid){
+
+    	if(_index.get(key).firstElement() > docid){
     		_cachedIndex.put(key, 1);
     		return _index.get(key).firstElement();    		
     	}
-    	if(_cachedIndex.get(key)>1
-	   &&_index.get(key).get(_cachedIndex.get(key)-1)<=docid)
-    		low=_cachedIndex.get(key)-1;
+
+    	if(_cachedIndex.get(key) > 1
+	   && _index.get(key).get(_cachedIndex.get(key)-1) <= docid)
+    		low = _cachedIndex.get(key)-1;
     	else
-    		low=1;
-    	jump=1;
-    	high=low+jump;
-    	while(high<_index.get(key).lastElement()
-	      &&_index.get(key).get(high)<=docid){
-    		low=high;
-    		jump=2*jump;
-    		high=low+jump;
+    		low = 1;
+
+    	jump = 1;
+    	high = low + jump;
+    	while(high < _index.get(key).lastElement()
+	      && _index.get(key).get(high) <= docid){
+    		low = high;
+    		jump = 2*jump;
+    		high = low+jump;
     	}
-    	if(high>_index.get(key).lastElement())
-    		high=_index.get(key).lastElement();
+
+    	if(high > _index.get(key).lastElement())
+    		high = _index.get(key).lastElement();
+
     	_cachedIndex.put(key, binarySearch(key,low,high,docid));    	
     	return _index.get(key).get(_cachedIndex.get(key));
-    	
     }
-
+    
+    /*
     //binary search
     private int next(String word, int docid){
     	int key=_dictionary.get(word);
@@ -253,23 +329,23 @@ public class IndexerInvertedDoconly extends IndexerCommon {
     	return _index.get(key).get(binarySearch(key,1,_index.size()-1,docid));
     	
     }
-    
+    */
     private int binarySearch(int key, int low, int high, int docid){
     	int mid;
-    	while(high-low>1){
-    		mid=(int) Math.floor((low+high)/2);
-    		if(_index.get(key).get(mid)<=docid)
-    			low=mid;
-    		else
-    			high=mid;
+    	while(high - low > 1){
+	    mid = (int) Math.floor((low+high) / 2);
+	    if(_index.get(key).get(mid) <= docid)
+		low = mid;
+	    else
+		high = mid;
     	}
     	return high;
     }
         
     private boolean equal(Vector<Integer> docs){
-    	int docid=docs.get(0);
+    	int docid = docs.get(0);
     	for(int i=1;i<docs.size();i++){
-	    if(docs.get(i)!=docid){
+	    if(docs.get(i) != docid){
 		return false;
 	    }
     	}
@@ -293,13 +369,11 @@ public class IndexerInvertedDoconly extends IndexerCommon {
 
     @Override
     public int corpusTermFrequency(String term) {
-	return _dictionary.containsKey(term) ? _termCorpusFrequency
-	    .get(_dictionary.get(term)) : 0;
+	return 0;
     }
 
     @Override
     public int documentTermFrequency(String term, String url) {
-	SearchEngine.Check(false, "Not implemented!");
-	return 0;
+	return 1;
     }
 }
