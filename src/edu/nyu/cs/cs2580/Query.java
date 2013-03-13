@@ -2,6 +2,8 @@ package edu.nyu.cs.cs2580;
 
 import java.util.Scanner;
 import java.util.Vector;
+import org.tartarus.snowball.SnowballStemmer;
+import org.tartarus.snowball.ext.englishStemmer;
 
 /**
  * Representation of a user query.
@@ -16,6 +18,7 @@ import java.util.Vector;
 public class Query {
   public String _query = null;
   public Vector<String> _tokens = new Vector<String>();
+    protected static SnowballStemmer _stemmer = new englishStemmer();
 
   public Query(String query) {
     _query = query;
@@ -27,7 +30,11 @@ public class Query {
     }
     Scanner s = new Scanner(_query);
     while (s.hasNext()) {
-      _tokens.add(s.next());
+	String q = s.next();
+	_stemmer.setCurrent(q);
+	_stemmer.stem();
+	q = _stemmer.getCurrent();
+	_tokens.add(q);
     }
     s.close();
   }
