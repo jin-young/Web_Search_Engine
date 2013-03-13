@@ -123,17 +123,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements	Serializ
 			_skipPointer.get(wordId).add(shortOffset);
 		}
 
-		// write to file
-		if (docId >= 1000 && (docId + 1) % 1000 == 1) {
-			try {
-				writeToFile();
-			} catch (IOException ie) {
-				System.err.println(ie.getMessage());
-			} catch (ClassNotFoundException ce) {
-				System.err.println(ce.getMessage());
-			}
-		}
-
 		return (position - 1); // num of tokens in this document
 	}
 
@@ -217,19 +206,19 @@ public class IndexerInvertedCompressed extends IndexerCommon implements	Serializ
 
 	// Wirte memory data into file
 	// after 1000 documents processing, it saved in one file
-	private int tmpId = 0;
+//	private int tmpId = 0;
 
 	@Override
-	public void writeToFile() throws IOException, ClassNotFoundException {
+	public void writeToFile(int fileIdx) throws IOException, ClassNotFoundException {
 		if (_index.isEmpty())
 			return;
-		String indexFile = _options._indexPrefix + "/tmp_" + tmpId;
+		String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
 		ObjectOutputStream writer = new ObjectOutputStream(
 				new FileOutputStream(indexFile));
 		writer.writeObject(_index);
 		_index.clear();
 		writer.close();
-		tmpId++;
+//		tmpId++;
 	}
 
 	@SuppressWarnings("unchecked")

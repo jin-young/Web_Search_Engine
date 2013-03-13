@@ -117,20 +117,20 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 
 	// Wirte memory data into file
 	// after 1000 documents processing, it saved in one file
-	private int tmpId = 0;
+	//private int tmpId = 0;
 
 	@Override
-	public void writeToFile() throws IOException, ClassNotFoundException {
+	public void writeToFile(int fileIdx) throws IOException, ClassNotFoundException {
 		if (_index.isEmpty())
 			return;
-		String indexFile = _options._indexPrefix + "/tmp_" + tmpId;
+		String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
 		ObjectOutputStream writer = new ObjectOutputStream(
 				new FileOutputStream(indexFile));
 		writer.writeObject(_index);
 		_index.clear();
 		writer.close();
 		writer.flush();
-		tmpId++;
+//		tmpId++;
 	}
 
 	@SuppressWarnings("unchecked")

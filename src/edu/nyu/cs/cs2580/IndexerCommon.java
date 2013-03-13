@@ -38,7 +38,7 @@ public abstract class IndexerCommon extends Indexer {
 				// write to file
 				if (count >= 1000 && (count % 1000 == 0)) {
 					try {
-						writeToFile();
+						writeToFile(count / 1000);
 					} catch (IOException ie) {
 						System.err.println(ie.getMessage());
 					} catch (ClassNotFoundException ce) {
@@ -50,7 +50,9 @@ public abstract class IndexerCommon extends Indexer {
 		}
 
 		try {
-			writeToFile();
+			if(count % 1000 != 0) {
+				writeToFile((count / 1000)+1);
+			}
 			mergeFile();
 			writeDicToFile();
 		} catch (ClassNotFoundException e) {
@@ -115,7 +117,7 @@ public abstract class IndexerCommon extends Indexer {
 	/**
 	 * After 1000 document reading, input _index into file to flush memory
 	 **/
-	public abstract void writeToFile() throws IOException,
+	public abstract void writeToFile(int fileIdx) throws IOException,
 			ClassNotFoundException;
 
 	/**
