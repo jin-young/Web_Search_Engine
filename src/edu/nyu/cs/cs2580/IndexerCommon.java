@@ -12,6 +12,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
 	protected static final int MAXCORPUS = 30;
+	protected int DIV = 1000; //can be override 
 
 	// Provided for serialization
 	public IndexerCommon() {
@@ -36,9 +37,9 @@ public abstract class IndexerCommon extends Indexer {
 			if (file.isFile()) {
 				processDocument(file);
 				// write to file
-				if (count >= 1000 && (count % 1000 == 0)) {
+				if (count >= DIV && (count % DIV == 0)) {
 					try {
-						writeToFile(count / 1000);
+						writeToFile(count / DIV);
 					} catch (IOException ie) {
 						System.err.println(ie.getMessage());
 					} catch (ClassNotFoundException ce) {
@@ -50,10 +51,10 @@ public abstract class IndexerCommon extends Indexer {
 		}
 
 		try {
-			if(count % 1000 != 0) {
-				writeToFile((count / 1000)+1);
+			if(count % DIV != 0) {
+				writeToFile((count / DIV)+1);
 			}
-			//mergeFile();
+			mergeFile();
 			writeDicToFile();
 		} catch (ClassNotFoundException e) {
 			System.err.println();
