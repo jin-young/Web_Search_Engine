@@ -190,7 +190,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		// find next document for each query
 		for (int i = 0; i < query._tokens.size(); i++) {
 			try {
-				doc = next(query._tokens.get(i), docid);
+				if (query._tokens.get(i).contains(" ")) {
+
+				} else {
+					doc = next(query._tokens.get(i), docid);
+				}
 			} catch (IOException ie) {
 				System.err.println(ie.getMessage());
 			} catch (ClassNotFoundException ce) {
@@ -328,15 +332,15 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	@Override
 	public int corpusTermFrequency(String term) {
 		int wordId = _dictionary.get(term);
-		ArrayList<Short> list = null; 
-		try{
+		ArrayList<Short> list = null;
+		try {
 			list = getDocArray(wordId);
-		}catch(IOException ie){
-		    System.err.println(ie.getMessage());
-		}catch(ClassNotFoundException ce){
-		    System.err.println(ce.getMessage());
+		} catch (IOException ie) {
+			System.err.println(ie.getMessage());
+		} catch (ClassNotFoundException ce) {
+			System.err.println(ce.getMessage());
 		}
-		
+
 		ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
 
 		int frequency = 0;
@@ -383,28 +387,30 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			if (doc.getUrl().equals(url))
 				docid = doc._docid;
 		}
-		if(docid == 0) return 0;  //we could not find given doc
-		
+		if (docid == 0)
+			return 0; // we could not find given doc
+
 		int wordId = _dictionary.get(term);
-		
-		ArrayList<Short> list = null; 
-		try{
+
+		ArrayList<Short> list = null;
+		try {
 			list = getDocArray(wordId);
-		}catch(IOException ie){
-		    System.err.println(ie.getMessage());
-		}catch(ClassNotFoundException ce){
-		    System.err.println(ce.getMessage());
+		} catch (IOException ie) {
+			System.err.println(ie.getMessage());
+		} catch (ClassNotFoundException ce) {
+			System.err.println(ce.getMessage());
 		}
-		int i=0;
+		int i = 0;
 		ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-		for(; i<skipInfo.size(); i=i+2) {
-			if(skipInfo.get(i) == docid) {
+		for (; i < skipInfo.size(); i = i + 2) {
+			if (skipInfo.get(i) == docid) {
 				break;
 			}
 		}
-		
-		if(i>skipInfo.size()) return 0; //we could not find given doc
-		
+
+		if (i > skipInfo.size())
+			return 0; // we could not find given doc
+
 		return decodeVbyte(nextPosition(i, list), list);
 	}
 
@@ -434,6 +440,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void writeToFile(int fileIdx) throws IOException,
 			ClassNotFoundException {
@@ -463,8 +470,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			String fileName = _options._indexPrefix + "/index_" + i + ".idx";
 			ObjectInputStream tmpFileReader = new ObjectInputStream(
 					new FileInputStream(fileName));
-			dumpedIndex = (TreeMap<Integer, ArrayList<Short>>) tmpFileReader
-					.readObject();
+			dumpedIndex = (TreeMap<Integer, ArrayList<Short>>) tmpFileReader.readObject();
 			tmpFileReader.close();
 			for (; stopIndex < words.length; stopIndex++) {
 				int wordId = _sessionDictionary.get(words[stopIndex]);
@@ -485,13 +491,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 
 		_sessionDictionary.clear();
 		_index.clear();
-		// String indexFile = _options._indexPrefix + "/intermediate_idx/" +
-		// fileIdx;
-		// ObjectOutputStream writer = new ObjectOutputStream(new
-		// FileOutputStream(indexFile));
-		// writer.writeObject(_index);
-		// _index.clear();
-		// writer.close();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -517,8 +516,61 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 
 	@Override
 	public int nextPhrase(Query query, int docid, int pos) {
-		// TODO Auto-generated method stub
-		return 0;
+		int docidVer = nextDoc(query, docid - 1)._docid;
+		if (docidVer != docid)
+			return -1;
+
+		Vector<Integer> posList = new Vector<Integer>();
+		for (int i = 0; i < query._tokens.size(); i++) {
+			int tmpPos = next_pos(query._tokens.get(i), docid, pos);
+			if (tmpPos == -1)
+				return -1;
+			posList.add(tmpPos);
+		}
+		boolean isSuccess = true;
+		for (int i = 1; i < posList.size(); i++)
+			if (posList.get(i - 1) + 1 != posList.get(i))
+				isSuccess = false;
+		if (isSuccess)
+			return posList.get(0);
+		return nextPhrase(query, docid, posList.get(1));
+	}
+
+	private int next_pos(String term, int docid, int pos) {
+		try {
+			int wordId = _dictionary.get(term);
+			ArrayList<Short> docMap = getDocArray(wordId);
+			
+			ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
+			int i=0;
+			for (; i < skipInfo.size(); i = i + 2) {
+				if (skipInfo.get(i) == docid) {
+					break;
+				}
+			}
+
+			if (i > skipInfo.size())
+				return -1; // we could not find given doc
+
+			int howManyOccured = decodeVbyte(nextPosition(i, docMap), docMap);
+			
+			ArrayList<Integer> posList = new ArrayList<Integer>();
+			int positionOfHead = nextPosition(nextPosition(i, docMap), docMap);
+			for(int j=0; j<howManyOccured; j++) {
+				posList.add(decodeVbyte(positionOfHead, docMap));
+				positionOfHead = nextPosition(positionOfHead, docMap);
+			}
+			
+			for (i = 0; i < posList.size(); i++) {
+				if (posList.get(i) > pos)
+					return posList.get(i);
+			}
+		} catch (IOException ie) {
+			System.err.println(ie.getMessage());
+		} catch (ClassNotFoundException ce) {
+			System.err.println(ce.getMessage());
+		}
+		return -1;
 	}
 
 	private boolean equal(Vector<Integer> docs) {
