@@ -53,7 +53,7 @@ public abstract class IndexerCommon extends Indexer {
 			if(count % 1000 != 0) {
 				writeToFile((count / 1000)+1);
 			}
-			mergeFile();
+			//mergeFile();
 			writeDicToFile();
 		} catch (ClassNotFoundException e) {
 			System.err.println();
