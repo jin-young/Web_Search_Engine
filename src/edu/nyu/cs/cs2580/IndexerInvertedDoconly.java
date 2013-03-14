@@ -29,11 +29,13 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
     protected int t_numDocs;
     protected long t_totalTermFrequency;
 
-    private Map<Integer, Integer> _cachedIndex = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> _cachedIndex 
+	= new HashMap<Integer, Integer>();
 
     // Inverted Index, key is the integer representation of the term and value
     // is the id list of document which appear this term.
-    private Map<Integer, Vector<Integer>> _index = new HashMap<Integer, Vector<Integer>>();
+    private Map<Integer, Vector<Integer>> _index 
+	= new HashMap<Integer, Vector<Integer>>();
 
     // Provided for serialization
     public IndexerInvertedDoconly() {
@@ -287,11 +289,12 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
      * In HW2, you should be using {@link DocumentIndexed}
      */
     @Override
-	public Document nextDoc(Query query, int docid) {
+    public int nextPhrase(Query query, int docid, int pos){
+	return 1;
+    }
 
-
-	System.out.println(" Class Name ; " + query.getClass().getSimpleName());
-
+    @Override
+    public Document nextDoc(Query query, int docid) {
 
 	Vector<Integer> docs = new Vector<Integer>();
 	int doc = -1;

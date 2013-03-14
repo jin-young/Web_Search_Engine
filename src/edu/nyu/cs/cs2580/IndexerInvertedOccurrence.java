@@ -245,6 +245,46 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements Serializ
      * In HW2, you should be using {@link DocumentIndexed}.
      */
     @Override
+    public int nextPhrase(Query query, int docid, int pos){
+	int docidVer = nextDoc(query, docid-1)._docid;
+	if(docidVer != docid)
+	    return -1;
+
+	Vector<Integer> posList = new Vector<Integer>();
+	for(int i=0; i<query._tokens.size(); i++){
+	    int tmpPos = next_pos(query._tokens.get(i), docid, pos);
+	    if(tmpPos == -1)
+		return -1;
+	    posList.add(tmpPos);
+	}
+	boolean isSuccess = true;
+	for(int i=1; i<posList.size(); i++)
+	    if(posList.get(i-1)+1 != posList.get(i))
+		isSuccess = false;
+	if(isSuccess)
+	    return posList.get(0);
+	return nextPhrase(query, docid, posList.get(1));
+    }
+
+    public int next_pos(String term, int docid, int pos){
+	try{
+	    int idx = _dictionary.get(term);
+	    HashMap<Integer, ArrayList<Integer>> docMap
+		= getDocMap(idx);
+	    ArrayList<Integer> posList = docMap.get(docid);
+	    for(int i=0; i<posList.size(); i++){
+		if(posList.get(i) > pos)
+		    return posList.get(i);
+	    }
+	}catch(IOException ie){
+	    System.err.println(ie.getMessage());
+	}catch(ClassNotFoundException ce){
+	    System.err.println(ce.getMessage());
+	}
+	return -1;
+    }
+
+    @Override
     public Document nextDoc(Query query, int docid) {
 	Vector<Integer> docs = new Vector<Integer>();
     	int doc = -1;

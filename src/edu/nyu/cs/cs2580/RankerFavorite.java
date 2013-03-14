@@ -29,22 +29,28 @@ public class RankerFavorite extends Ranker {
 	DocumentIndexed doc = null;
 	int docid = -1;
 	while ((doc = (DocumentIndexed)_indexer.nextDoc(query, docid)) != null) {
-	    if(!docList.contains(doc)){
-		rankList.add(scoreDocument(query, doc));
-		docList.add(doc);
+	    // Process Phrase search
+	    int resultPos = 0;
+	    if(query.getClass().getSimpleName().equals("QueryPhrase")){
+		resultPos = ((IndexerCommon)_indexer).nextPhrase(query, docid, -1);
 	    }
 
-	    if (rankList.size() > numResults) {    
-		double minValue = rankList.get(0).getScore();
-		int id = 0;
-		for(int i=1; i<rankList.size(); i++){
-		    if(rankList.get(i).getScore() < minValue){
-			minValue = rankList.get(i).getScore();
-			id = i;
+	    if(!docList.contains(doc) && resultPos != -1){
+		rankList.add(scoreDocument(query, doc));
+		docList.add(doc);
+		
+		if (rankList.size() > numResults) {    
+		    double minValue = rankList.get(0).getScore();
+		    int id = 0;
+		    for(int i=1; i<rankList.size(); i++){
+			if(rankList.get(i).getScore() < minValue){
+			    minValue = rankList.get(i).getScore();
+			    id = i;
+			}
 		    }
+		    rankList.remove(id);
+		    docList.remove(id);
 		}
-		rankList.remove(id);
-		docList.remove(id);
 	    }
 	    docid = doc._docid;
 	}

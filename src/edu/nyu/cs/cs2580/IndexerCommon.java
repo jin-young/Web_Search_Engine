@@ -131,6 +131,11 @@ public abstract class IndexerCommon extends Indexer {
 	 **/
 	public abstract void writeDicToFile() throws IOException;
 
+        /**
+         * Next Phrase position
+         **/
+        public abstract int nextPhrase(Query query, int docid, int pos);
+
 	/**
 	 * Make Index with content string of html.
 	 * 
