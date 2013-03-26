@@ -14,7 +14,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -38,14 +37,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	protected int t_numDocs;
 	protected long t_totalTermFrequency;
 
-	private Map<Integer, Integer> _cachedIndex;
-
 	public IndexerInvertedCompressed(Options options) {
 		super(options);
 		_index = new TreeMap<Integer, ArrayList<Short>>();
 		_skipPointer = new HashMap<Integer, ArrayList<Integer>>();
 		_sessionDictionary = new TreeMap<String, Integer>();
-		_cachedIndex = new HashMap<Integer, Integer>();
 
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
@@ -215,68 +211,22 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		// search next
 		return nextDoc(query, Max(docs) - 1);
 	}
-
-	// galloping search
-	private int next(String word, int current) throws IOException,
-			ClassNotFoundException {
-
-		int low, high, jump;
+	
+	protected Vector<Integer> retriveDocList(String word) {
 		int idx = _dictionary.get(word);
-		ArrayList<Short> docMap = getDocArray(idx);
 		Vector<Integer> docList = new Vector<Integer>();
-
+		
 		for (int i = 0; i < _skipPointer.get(idx).size(); i = i + 2) {
 			docList.add(_skipPointer.get(idx).get(i));
 		}
-
+		
 		// Sort the doc list
 		Collections.sort(docList);
-
-		int lt = docList.size() - 1;
-
-		if (docList.size() <= 1 || docList.lastElement() <= current) {
-			return -1;
-		}
-
-		if (docList.firstElement() > current) {
-			_cachedIndex.put(idx, 1);
-			return docList.firstElement();
-		}
-
-		if (_cachedIndex.containsKey(idx) && _cachedIndex.get(idx) > 1
-				&& docList.get(_cachedIndex.get(idx) - 1) <= current) {
-			low = _cachedIndex.get(idx) - 1;
-		} else
-			low = 1;
-
-		jump = 1;
-		high = low + jump;
-		while (high < lt && docList.get(high) <= current) {
-			low = high;
-			jump = 2 * jump;
-			high = low + jump;
-		}
-
-		if (high > lt)
-			high = lt;
-
-		_cachedIndex.put(idx, binarySearch(docList, low, high, current));
-		return docList.get(_cachedIndex.get(idx));
+		
+		return docList;
 	}
 
-	private int binarySearch(Vector<Integer> docList, int low, int high,
-			int current) {
-		int mid;
-		while (high - low > 1) {
-			mid = (int) ((low + high) / 2.0);
-			if (docList.get(mid) <= current)
-				low = mid;
-			else
-				high = mid;
-		}
-		return high;
-	}
-
+	@SuppressWarnings("unchecked")
 	private ArrayList<Short> getDocArray(int idx) throws IOException,
 			ClassNotFoundException {
 
@@ -470,7 +420,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			String fileName = _options._indexPrefix + "/index_" + i + ".idx";
 			ObjectInputStream tmpFileReader = new ObjectInputStream(
 					new FileInputStream(fileName));
-			dumpedIndex = (TreeMap<Integer, ArrayList<Short>>) tmpFileReader.readObject();
+			dumpedIndex = (TreeMap<Integer, ArrayList<Short>>) tmpFileReader
+					.readObject();
 			tmpFileReader.close();
 			for (; stopIndex < words.length; stopIndex++) {
 				int wordId = _sessionDictionary.get(words[stopIndex]);
@@ -493,7 +444,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		_index.clear();
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public void mergeFile() throws IOException, ClassNotFoundException {
 
@@ -540,9 +490,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		try {
 			int wordId = _dictionary.get(term);
 			ArrayList<Short> docMap = getDocArray(wordId);
-			
+
 			ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-			int i=0;
+			int i = 0;
 			for (; i < skipInfo.size(); i = i + 2) {
 				if (skipInfo.get(i) == docid) {
 					break;
@@ -553,14 +503,14 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 				return -1; // we could not find given doc
 
 			int howManyOccured = decodeVbyte(nextPosition(i, docMap), docMap);
-			
+
 			ArrayList<Integer> posList = new ArrayList<Integer>();
 			int positionOfHead = nextPosition(nextPosition(i, docMap), docMap);
-			for(int j=0; j<howManyOccured; j++) {
+			for (int j = 0; j < howManyOccured; j++) {
 				posList.add(decodeVbyte(positionOfHead, docMap));
 				positionOfHead = nextPosition(positionOfHead, docMap);
 			}
-			
+
 			for (i = 0; i < posList.size(); i++) {
 				if (posList.get(i) > pos)
 					return posList.get(i);
@@ -571,24 +521,5 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			System.err.println(ce.getMessage());
 		}
 		return -1;
-	}
-
-	private boolean equal(Vector<Integer> docs) {
-		int docid = docs.get(0);
-		for (int i = 1; i < docs.size(); i++) {
-			if (docs.get(i) != docid) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private int Max(Vector<Integer> docs) {
-		int max = 0;
-		for (int i = 0; i < docs.size(); i++) {
-			if (docs.get(i) > max)
-				max = docs.get(i);
-		}
-		return max;
 	}
 }

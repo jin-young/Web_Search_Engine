@@ -2,16 +2,15 @@ package edu.nyu.cs.cs2580;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.FileNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Vector;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import java.util.Scanner;
-import java.util.Vector;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.TreeMap;
 import org.tartarus.snowball.SnowballStemmer;
 import org.tartarus.snowball.ext.englishStemmer;
 
@@ -29,6 +28,8 @@ public abstract class IndexerCommon extends Indexer {
     // Maps each term to their integer representation
     protected Map<String, Integer> _dictionary 
 	= new TreeMap<String, Integer>();
+    
+    protected Map<Integer, Integer> _cachedIndex = new HashMap<Integer, Integer>();
     
     // Provided for serialization
     public IndexerCommon() {
@@ -182,4 +183,78 @@ public abstract class IndexerCommon extends Indexer {
 	_stemmer.stem();
 	return _stemmer.getCurrent();
     }
+    
+	protected boolean equal(Vector<Integer> docs) {
+		int docid = docs.get(0);
+		for (int i = 1; i < docs.size(); i++) {
+			if (docs.get(i) != docid) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	protected int Max(Vector<Integer> docs) {
+		int max = 0;
+		for (int i = 0; i < docs.size(); i++) {
+			if (docs.get(i) > max)
+				max = docs.get(i);
+		}
+		return max;
+	}
+	
+	protected abstract Vector<Integer> retriveDocList(String word) throws IOException, ClassNotFoundException;
+	
+	// galloping search
+	protected int next(String word, int current) throws IOException,
+			ClassNotFoundException {
+
+		int low, high, jump;
+		int idx = _dictionary.get(word);
+
+		Vector<Integer> docList = retriveDocList(word);
+		int lt = docList.size() - 1;
+
+		if (docList.size() <= 1 || docList.lastElement() <= current) {
+			return -1;
+		}
+
+		if (docList.firstElement() > current) {
+			_cachedIndex.put(idx, 1);
+			return docList.firstElement();
+		}
+
+		if (_cachedIndex.containsKey(idx) && _cachedIndex.get(idx) > 1
+				&& docList.get(_cachedIndex.get(idx) - 1) <= current) {
+			low = _cachedIndex.get(idx) - 1;
+		} else
+			low = 1;
+
+		jump = 1;
+		high = low + jump;
+		while (high < lt && docList.get(high) <= current) {
+			low = high;
+			jump = 2 * jump;
+			high = low + jump;
+		}
+
+		if (high > lt)
+			high = lt;
+
+		_cachedIndex.put(idx, binarySearch(docList, low, high, current));
+		return docList.get(_cachedIndex.get(idx));
+	}	
+	
+	protected int binarySearch(Vector<Integer> docList, int low, int high,
+			int current) {
+		int mid;
+		while (high - low > 1) {
+			mid = (int) ((low + high) / 2.0);
+			if (docList.get(mid) <= current)
+				low = mid;
+			else
+				high = mid;
+		}
+		return high;
+	}
 }
