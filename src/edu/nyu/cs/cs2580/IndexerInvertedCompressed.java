@@ -144,35 +144,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		return (position - 1); // num of tokens in this document
 	}
 
-	private short[] encodeVbyte(int value) {
-		short[] alignedCode;
-
-		if (value < Math.pow(2, 7)) {
-			alignedCode = new short[1];
-			alignedCode[0] = (short) ((value & 0x0000007F) | 0x00000080);
-		} else if (Math.pow(2, 7) <= value && value < Math.pow(2, 14)) {
-			alignedCode = new short[2];
-			alignedCode[1] = (short) ((value & 0x0000007F) | 0x00000080);
-			alignedCode[0] = (short) ((value >> 7) & 0x0000007F);
-		} else if (Math.pow(2, 14) <= value && value < Math.pow(2, 21)) {
-			alignedCode = new short[3];
-			alignedCode[2] = (short) ((value & 0x0000007F) | 0x00000080);
-			alignedCode[1] = (short) ((value >> 7) & 0x0000007F);
-			alignedCode[0] = (short) ((value >> 14) & 0x0000007F);
-		} else if (Math.pow(2, 21) <= value && value < Math.pow(2, 28)) {
-			alignedCode = new short[4];
-			alignedCode[3] = (short) ((value & 0x0000007F) | 0x00000080);
-			alignedCode[2] = (short) ((value >> 7) & 0x0000007F);
-			alignedCode[1] = (short) ((value >> 14) & 0x0000007F);
-			alignedCode[0] = (short) ((value >> 21) & 0x0000007F);
-		} else {
-			throw new RuntimeException("Value : " + value
-					+ " cannot be handled by shortAlignedCode");
-		}
-
-		return alignedCode;
-	}
-
 	@Override
 	public Document getDoc(int docid) {
 		return _documents.get(docid);
@@ -303,32 +274,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		return frequency;
 	}
 
-	private int decodeVbyte(int startPosition, ArrayList<Short> list) {
-		int value = 0;
-		Short s = list.get(startPosition);
-		while ((s & 0x00000080) == 0) {
-			value = value << 7;
-			value = value | (s & 0x0000007F);
-			startPosition++;
-			s = list.get(startPosition);
-		}
-		value = value << 7;
-		value = value | (s & 0x0000007F);
 
-		return value;
-	}
-
-	private int nextPosition(int startPosition, ArrayList<Short> list) {
-		int offset = 1;
-		for (; startPosition < list.size(); startPosition++) {
-			if ((list.get(startPosition) & 0x00000080) == 0) {
-				offset++;
-			} else {
-				break;
-			}
-		}
-		return startPosition + offset;
-	}
 
 	@Override
 	public int documentTermFrequency(String term, String url) {
@@ -521,5 +467,64 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			System.err.println(ce.getMessage());
 		}
 		return -1;
+	}
+	
+	//TEST DONE FROM HERE
+
+	protected short[] encodeVbyte(int value) {
+		short[] alignedCode;
+
+		if (value < Math.pow(2, 7)) {
+			alignedCode = new short[1];
+			alignedCode[0] = (short) ((value & 0x0000007F) | 0x00000080);
+		} else if (Math.pow(2, 7) <= value && value < Math.pow(2, 14)) {
+			alignedCode = new short[2];
+			alignedCode[1] = (short) ((value & 0x0000007F) | 0x00000080);
+			alignedCode[0] = (short) ((value >> 7) & 0x0000007F);
+		} else if (Math.pow(2, 14) <= value && value < Math.pow(2, 21)) {
+			alignedCode = new short[3];
+			alignedCode[2] = (short) ((value & 0x0000007F) | 0x00000080);
+			alignedCode[1] = (short) ((value >> 7) & 0x0000007F);
+			alignedCode[0] = (short) ((value >> 14) & 0x0000007F);
+		} else if (Math.pow(2, 21) <= value && value < Math.pow(2, 28)) {
+			alignedCode = new short[4];
+			alignedCode[3] = (short) ((value & 0x0000007F) | 0x00000080);
+			alignedCode[2] = (short) ((value >> 7) & 0x0000007F);
+			alignedCode[1] = (short) ((value >> 14) & 0x0000007F);
+			alignedCode[0] = (short) ((value >> 21) & 0x0000007F);
+		} else {
+			throw new RuntimeException("Value : " + value
+					+ " cannot be handled by shortAlignedCode");
+		}
+
+		return alignedCode;
+	}
+	
+	protected int decodeVbyte(int startPosition, ArrayList<Short> list) {
+		int value = 0;
+		Short s = list.get(startPosition);
+		while ((s & 0x00000080) == 0) {
+			value = value << 7;
+			value = value | (s & 0x0000007F);
+			startPosition++;
+			s = list.get(startPosition);
+		}
+		value = value << 7;
+		value = value | (s & 0x0000007F);
+
+		return value;
+	}
+
+	protected int nextPosition(int startPosition, ArrayList<Short> list) {
+		int offset = 1;
+		int tempP = startPosition;
+		for (; tempP < list.size(); tempP++) {
+			if ((list.get(tempP) & 0x00000080) == 0) {
+				offset++;
+			} else {
+				break;
+			}
+		}
+		return startPosition + offset;
 	}
 }
