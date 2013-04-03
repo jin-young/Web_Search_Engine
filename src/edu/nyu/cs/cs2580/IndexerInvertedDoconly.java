@@ -117,7 +117,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	// private int tmpId = 0;
 
 	@SuppressWarnings("unchecked")
-	@Override
 	public void writeToFile(int fileIdx) throws IOException,
 			ClassNotFoundException {
 		if (_index.isEmpty())
@@ -168,43 +167,10 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 			_tmpIndex.clear();
 		}
 	}
-
+	
 	@Override
-	public void mergeFile() throws IOException, ClassNotFoundException {
-		/*
-		 * File folder = new File(_options._indexPrefix); File[] listOfFiles =
-		 * folder.listFiles();
-		 * 
-		 * for (File file : listOfFiles) { if (file.isFile() &&
-		 * file.getName().contains("tmp_")) {
-		 * System.out.println("Open tmporary file : " + file.getName());
-		 * ObjectInputStream tmpFileReader = new ObjectInputStream( new
-		 * FileInputStream(file)); _index = (HashMap<Integer, Vector<Integer>>)
-		 * tmpFileReader .readObject(); tmpFileReader.close();
-		 * 
-		 * for (int i = 0; i < MAXCORPUS; i++) { // Read corpus file String
-		 * indexFile = _options._indexPrefix + "/corpus_" + i + ".idx";
-		 * ObjectInputStream reader = new ObjectInputStream( new
-		 * FileInputStream(indexFile)); System.out.println("Write " +
-		 * indexFile);
-		 * 
-		 * Map<Integer, Vector<Integer>> _tmpIndex = (HashMap<Integer,
-		 * Vector<Integer>>) reader .readObject();
-		 * 
-		 * reader.close();
-		 * 
-		 * // processing Iterator<String> it = _dictionary.keySet().iterator();
-		 * while (it.hasNext()) { String key = (String) it.next(); int idx =
-		 * _dictionary.get(key); if (idx % MAXCORPUS == i) { // look at this key
-		 * is exist on the _index if (_index.containsKey(idx)) { // If there are
-		 * no this key in the file if (!_tmpIndex.containsKey(idx)) {
-		 * Vector<Integer> docList = new Vector<Integer>(); _tmpIndex.put(idx,
-		 * docList); } _tmpIndex.get(idx).addAll(_index.get(idx));
-		 * _index.remove(idx); } } } // write corpus file ObjectOutputStream
-		 * writer = new ObjectOutputStream( new FileOutputStream(indexFile));
-		 * writer.writeObject(_tmpIndex); writer.close(); writer.flush();
-		 * _tmpIndex.clear(); } file.delete(); } }
-		 */
+	public void writeToFile() throws IOException, ClassNotFoundException {
+		throw new RuntimeException("Not implemented yet");
 	}
 
 	@Override

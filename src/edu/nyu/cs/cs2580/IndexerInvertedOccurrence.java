@@ -1,6 +1,7 @@
 package edu.nyu.cs.cs2580;
 
-import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -9,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,7 +31,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	// key is the integer representation of the term
 	// value is HashMap
 	// key is the Document ID
-	// Value is occurence postion list.
+	// Value is occurrence position list.
 	private HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _index = new HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>();
 
 	// Back-up variables for serializable file write.
@@ -52,7 +54,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	public void makeCorpusFiles() throws IOException {
 		// make corpus files
 		for (int i = 0; i < MAXCORPUS; i++) {
-			String indexFile = _options._indexPrefix + "/corpus_" + i + ".idx";
+			String indexFile = _options._indexPrefix + "/index_" + i + ".idx";
 			ObjectOutputStream writer = new ObjectOutputStream(
 					new FileOutputStream(indexFile));
 			Map<Integer, Vector<Integer>> _tmpIndex = new HashMap<Integer, Vector<Integer>>();
@@ -68,7 +70,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	public void writeDicToFile() throws IOException {
 		String dicFile = _options._indexPrefix + "/dictionary.idx";
 		ObjectOutputStream writer = new ObjectOutputStream(
-				new FileOutputStream(dicFile));
+				new BufferedOutputStream(new FileOutputStream(dicFile),2048));
 		// back-up variables from Indexer class
 		t_documents = _documents;
 		t_dictionary = _dictionary;
@@ -88,19 +90,27 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	 **/
 	@Override
 	public int makeIndex(String content, int did) {
-		Scanner s = new Scanner(content); // Uses white space by default.
+		Scanner s = new Scanner(content);
 		int position = 1;
 		int tokenSize = 0;
 		while (s.hasNext()) {
-			String token = porterAlg(s.next());
+			String token = porterAlg(s.next()).toLowerCase();
 			int idx = -1;
+
+			// This Token is already in the dictionary
 			if (_dictionary.containsKey(token)) {
 				idx = _dictionary.get(token);
+				HashMap<Integer, ArrayList<Integer>> docMap;
+
+				// Check Term
 				if (!_index.containsKey(idx)) {
-					HashMap<Integer, ArrayList<Integer>> tmp = new HashMap<Integer, ArrayList<Integer>>();
-					_index.put(idx, tmp);
+					docMap = new HashMap<Integer, ArrayList<Integer>>();
+					_index.put(idx, docMap);
+				} else {
+					docMap = _index.get(idx);
 				}
-				HashMap<Integer, ArrayList<Integer>> docMap = _index.get(idx);
+
+				// Check Doc_ID in the Term
 				if (docMap.containsKey(did))
 					docMap.get(did).add(position);
 				else {
@@ -108,7 +118,9 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 					occurList.add(position);
 					docMap.put(did, occurList);
 				}
-			} else {
+			}
+			// This is new Token
+			else {
 				idx = _dictionary.size();
 				_dictionary.put(token, idx);
 				HashMap<Integer, ArrayList<Integer>> docMap = new HashMap<Integer, ArrayList<Integer>>();
@@ -122,82 +134,84 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			++tokenSize;
 		}
 		s.close();
-
 		return tokenSize;
 	}
 
-	// Wirte memory data into file
+	// Write memory data into file
 	// after 1000 documents processing, it saved in one file
 	// private int tmpId = 0;
 
-	@Override
-	public void writeToFile(int fileIdx) throws IOException,
-			ClassNotFoundException {
-		if (_index.isEmpty())
-			return;
-		String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
-		ObjectOutputStream writer = new ObjectOutputStream(
-				new FileOutputStream(indexFile));
-		writer.writeObject(_index);
-		_index.clear();
-		writer.close();
-		// tmpId++;
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
-	public void mergeFile() throws IOException, ClassNotFoundException {
-		File folder = new File(_options._indexPrefix);
-		File[] listOfFiles = folder.listFiles();
+	public void writeToFile() throws IOException, ClassNotFoundException {
+		ArrayList<Integer> idxList = new ArrayList<Integer>();
+		Iterator<String> it = _dictionary.keySet().iterator();
+		while (it.hasNext()) {
+			String key = (String) it.next();
+			int idx = _dictionary.get(key);
+			idxList.add(idx);
+		}
+		
+		writeDicToFile();
+		_dictionary.clear();
 
-		for (File file : listOfFiles) {
-			if (file.isFile() && file.getName().contains("tmp_")) {
-				ObjectInputStream tmpFileReader = new ObjectInputStream(
-						new FileInputStream(file));
-				_index = (HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>) tmpFileReader
-						.readObject();
-				tmpFileReader.close();
-
-				for (int i = 0; i < MAXCORPUS; i++) {
-					// Read corpus file
-					String indexFile = _options._indexPrefix + "/corpus_" + i
-							+ ".idx";
-					ObjectInputStream reader = new ObjectInputStream(
-							new FileInputStream(indexFile));
-					System.out.println("Write " + indexFile);
-
-					HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _tmpIndex = (HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>) reader
-							.readObject();
-					reader.close();
-
-					// processing
-					Iterator<String> it = _dictionary.keySet().iterator();
-					while (it.hasNext()) {
-						String key = (String) it.next();
-						int idx = _dictionary.get(key);
-						if (idx % MAXCORPUS == i) {
-							// look at this key is exist on the _index
-							if (_index.containsKey(idx)) {
-								// If there are no this key in the file
-								if (!_tmpIndex.containsKey(idx)) {
-									HashMap<Integer, ArrayList<Integer>> tmp = new HashMap<Integer, ArrayList<Integer>>();
-									_tmpIndex.put(idx, tmp);
-								}
-								_tmpIndex.get(idx).putAll(_index.get(idx));
-								_index.remove(idx);
-							}
-						}
-					}
-					// write corpus file
-					ObjectOutputStream writer = new ObjectOutputStream(
-							new FileOutputStream(indexFile));
-					writer.writeObject(_tmpIndex);
-					writer.close();
-					writer.flush();
-					_tmpIndex.clear();
-				}
-				file.delete();
+		// sorting idxList based on (idx % MAXCORPUS)
+		Comparator<Integer> comparator = new Comparator<Integer>() {
+			@Override
+			public int compare(Integer i1, Integer i2) {
+				return (i1.intValue() % MAXCORPUS)
+						- (i2.intValue() % MAXCORPUS);
 			}
+		};
+		Collections.sort(idxList, comparator);
+		int idxListIndex = 0;
+
+		// Read and Write on Corpus
+		HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _corpusIndex;
+		for (int i = 0; i < MAXCORPUS; i++) {
+			// Read corpus file
+			String indexFile = _options._indexPrefix + "/index_" + i + ".idx";
+			ObjectInputStream reader = new ObjectInputStream(
+					new BufferedInputStream(new FileInputStream(indexFile)));
+			_corpusIndex = (HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>) reader
+					.readObject();
+			reader.close();
+			System.out.println("Read " + indexFile);
+
+			// Input _index elements into _corpus Index
+			for (; idxListIndex < idxList.size(); ++idxListIndex) {
+				int idx = idxList.get(idxListIndex);
+				if (idx % MAXCORPUS == i) {
+					// look at this key is exist on the _index
+					if (_index.containsKey(idx)) {
+						// If there are no this key in the file
+						if (!_corpusIndex.containsKey(idx)) {
+							HashMap<Integer, ArrayList<Integer>> tmp = new HashMap<Integer, ArrayList<Integer>>();
+							_corpusIndex.put(idx, tmp);
+						}
+						_corpusIndex.get(idx).putAll(_index.get(idx));
+						_index.remove(idx);
+					}
+				} else {
+					break;
+				}
+			}
+
+			// Write corpus file
+			ObjectOutputStream writer = new ObjectOutputStream(
+					new BufferedOutputStream(new FileOutputStream(indexFile), 2048));
+			writer.writeObject(_corpusIndex);
+			writer.close();
+			writer.flush();
+			_corpusIndex.clear();
+			System.out.println("Write " + indexFile);
+			
+			String dicFile = _options._indexPrefix + "/dictionary.idx";
+			ObjectInputStream dicReader = new ObjectInputStream(
+					new BufferedInputStream(new FileInputStream(dicFile)));
+			
+			_dictionary = (Map<String, Integer>) dicReader.readObject();
+			dicReader.close();
 		}
 	}
 

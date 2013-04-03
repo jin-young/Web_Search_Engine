@@ -24,11 +24,12 @@ public class IndexerInvertedCompressedTest {
 		indexer = (IndexerInvertedCompressed) Indexer.Factory
 				.getIndexerByOption(_options);
 		
-		// (2 1 2) (4 4 123 3 20000 11)
+		// (2 1 2) (4 4 132 3 20000 11) (5 130 1 2 3 4 5 6)
 		shortList = new ArrayList<Short>();
 		shortList.add((short) 0x82);
 		shortList.add((short) 0x81);
 		shortList.add((short) 0x82);
+		
 		shortList.add((short) 0x84);
 		shortList.add((short) 0x84);
 		shortList.add((short) 0x01);
@@ -38,6 +39,16 @@ public class IndexerInvertedCompressedTest {
 		shortList.add((short) 0x1C);
 		shortList.add((short) 0xA0);
 		shortList.add((short) 0x8B);
+		
+		shortList.add((short) 0x85);
+		shortList.add((short) 0x01);
+		shortList.add((short) 0x82);
+		shortList.add((short) 0x81);
+		shortList.add((short) 0x82);
+		shortList.add((short) 0x83);
+		shortList.add((short) 0x84);
+		shortList.add((short) 0x85);
+		shortList.add((short) 0x86);
 	}
 
 	@Test
@@ -88,5 +99,12 @@ public class IndexerInvertedCompressedTest {
 
 		assertThat("Next position after multi-byte value at 8",
 				indexer.nextPosition(8, shortList), is(11));
+	}
+	
+	@Test
+	public void testHowManyAppeared() {
+		assertThat(indexer.howManyAppeared(0, shortList), is(1));
+		assertThat(indexer.howManyAppeared(3, shortList), is(4));
+		assertThat(indexer.howManyAppeared(12, shortList), is(130));
 	}
 }

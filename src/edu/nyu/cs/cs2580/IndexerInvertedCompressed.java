@@ -1,5 +1,7 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -39,7 +41,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 
 	public IndexerInvertedCompressed(Options options) {
 		super(options);
-		_index = new TreeMap<Integer, ArrayList<Short>>();
+		_index = new HashMap<Integer, ArrayList<Short>>();
 		_skipPointer = new HashMap<Integer, ArrayList<Integer>>();
 		_sessionDictionary = new TreeMap<String, Integer>();
 
@@ -60,7 +62,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		while (s.hasNext()) {
 			_stemmer.setCurrent(s.next());
 			_stemmer.stem();
-			String token = _stemmer.getCurrent();
+			String token = _stemmer.getCurrent().toLowerCase();
 			int postingId;
 			if (_dictionary.get(token) != null) {
 				postingId = _dictionary.get(token);
@@ -332,74 +334,98 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			ObjectOutputStream writer = new ObjectOutputStream(
 					new FileOutputStream(indexFile));
 			writer.writeObject(new TreeMap<Integer, Vector<Integer>>());
+			writer.flush();
 			writer.close();
 		}
 	}
+	
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void writeToFile(int fileIdx) throws IOException,
-			ClassNotFoundException {
+	public void writeToFile() throws IOException, ClassNotFoundException {
 		if (_index.isEmpty())
 			return;
-		String[] words = new String[_sessionDictionary.size()];
-		words = _sessionDictionary.keySet().toArray(words);
-
-		Arrays.sort(words, new Comparator<String>() {
-
+		
+		Integer[] wordIds = _index.keySet().toArray(new Integer[1]);
+		
+		Arrays.sort(wordIds, new Comparator<Integer>() {
 			@Override
-			public int compare(String o1, String o2) {
-				int o1_mod = _sessionDictionary.get(o1) % MAXCORPUS;
-				int o2_mod = _sessionDictionary.get(o2) % MAXCORPUS;
-
-				if (o1_mod > o2_mod) {
-					return 1;
-				} else if (o1_mod < o2_mod) {
+			public int compare(Integer o1, Integer o2) {
+				if (o1.intValue() % MAXCORPUS < o2.intValue() % MAXCORPUS)
 					return -1;
-				}
-				return 0;
+				else if (o1.intValue() % MAXCORPUS > o2.intValue() % MAXCORPUS)
+					return 1;
+				else
+					return 0;
 			}
+			
 		});
-		Map<Integer, ArrayList<Short>> dumpedIndex = null;
-		int stopIndex = 0;
-		for (int i = 0; i < MAXCORPUS; i++) {
-			String fileName = _options._indexPrefix + "/index_" + i + ".idx";
-			ObjectInputStream tmpFileReader = new ObjectInputStream(
-					new FileInputStream(fileName));
-			dumpedIndex = (TreeMap<Integer, ArrayList<Short>>) tmpFileReader
-					.readObject();
-			tmpFileReader.close();
-			for (; stopIndex < words.length; stopIndex++) {
-				int wordId = _sessionDictionary.get(words[stopIndex]);
-				if (wordId % MAXCORPUS != i) {
-					break;
+		
+		writeDicToFile();
+		_dictionary.clear();
+		
+		int corpusId = 0;
+		ObjectOutputStream writer = null;
+		ObjectInputStream reader = null;
+		
+		String corpusPrefix = _options._indexPrefix + "/index_";
+		String corpusSurfix = ".idx";
+		Map<Integer, ArrayList<Short>> tempIndex = null;
+		
+		System.out.println("Let start corpus " + corpusId);
+		for(int wordId : wordIds) {
+			if(corpusId != (wordId % MAXCORPUS)) {
+				System.out.print("New corpus for wordId " + wordId + ". ");
+				if(! tempIndex.isEmpty() ) {
+					
+					writer = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(corpusPrefix + corpusId + corpusSurfix)));
+					//writer = new ObjectOutputStream((new FileOutputStream(corpusPrefix + corpusId + corpusSurfix)));
+					writer.writeObject(tempIndex);
+					writer.flush();
+					writer.close();
+					
+					tempIndex.clear();
+					tempIndex = null;
 				}
-				if (dumpedIndex.get(wordId) != null) {
-					dumpedIndex.get(wordId).addAll(_index.get(wordId));
-				} else {
-					dumpedIndex.put(wordId, _index.get(wordId));
-				}
+				
+				corpusId = wordId % MAXCORPUS;
+				System.out.println("Let start corpus " + corpusId);
 			}
-			ObjectOutputStream writer = new ObjectOutputStream(
-					new FileOutputStream(fileName));
-			writer.writeObject(dumpedIndex);
-			writer.close();
+			
+			if(tempIndex == null) {
+				reader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(corpusPrefix + corpusId + corpusSurfix)));;
+				tempIndex = (Map<Integer, ArrayList<Short>>)reader.readObject();
+				reader.close();
+			}
+			
+			if(tempIndex.containsKey(wordId)) {
+				ArrayList<Short> org = tempIndex.get(wordId);
+				ArrayList<Short> current = _index.get(wordId);
+				
+				for(Short value : current) {
+					org.add(value);
+				}
+				
+				tempIndex.put(wordId, org);
+			} else {
+				tempIndex.put(wordId, _index.get(wordId));
+			}
 		}
-
-		_sessionDictionary.clear();
+		
 		_index.clear();
-	}
-
-	@Override
-	public void mergeFile() throws IOException, ClassNotFoundException {
-
-	}
+		
+		String dicFile = _options._indexPrefix + "/dictionary.idx";
+		ObjectInputStream dicReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dicFile)));;
+		
+		_dictionary = (Map<String, Integer>) dicReader.readObject();
+		dicReader.close();
+	}	
 
 	@Override
 	public void writeDicToFile() throws IOException {
 		String dicFile = _options._indexPrefix + "/dictionary.idx";
 		ObjectOutputStream writer = new ObjectOutputStream(
-				new FileOutputStream(dicFile));
+				new BufferedOutputStream(new FileOutputStream(dicFile)));
 		// back-up variables from Indexer class
 		t_documents = _documents;
 		t_dictionary = _dictionary;
@@ -435,7 +461,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	private int next_pos(String term, int docid, int pos) {
 		try {
 			int wordId = _dictionary.get(term);
-			ArrayList<Short> docMap = getDocArray(wordId);
+			ArrayList<Short> posting = getDocArray(wordId);
 
 			ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
 			int i = 0;
@@ -448,13 +474,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			if (i > skipInfo.size())
 				return -1; // we could not find given doc
 
-			int howManyOccured = decodeVbyte(nextPosition(i, docMap), docMap);
+			int howManyOccured = howManyAppeared(i,posting);
 
 			ArrayList<Integer> posList = new ArrayList<Integer>();
-			int positionOfHead = nextPosition(nextPosition(i, docMap), docMap);
+			int positionOfHead = nextPosition(nextPosition(i, posting), posting);
 			for (int j = 0; j < howManyOccured; j++) {
-				posList.add(decodeVbyte(positionOfHead, docMap));
-				positionOfHead = nextPosition(positionOfHead, docMap);
+				posList.add(decodeVbyte(positionOfHead, posting));
+				positionOfHead = nextPosition(positionOfHead, posting);
 			}
 
 			for (i = 0; i < posList.size(); i++) {
@@ -470,7 +496,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	}
 	
 	//TEST DONE FROM HERE
-
 	protected short[] encodeVbyte(int value) {
 		short[] alignedCode;
 
@@ -526,5 +551,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			}
 		}
 		return startPosition + offset;
+	}
+	
+	protected int howManyAppeared(int positionOfDocId, ArrayList<Short> docMap) {
+		return decodeVbyte(nextPosition(positionOfDocId, docMap), docMap);
 	}
 }
