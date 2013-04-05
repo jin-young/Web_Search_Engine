@@ -152,7 +152,8 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			if( corpusId != (Math.abs(wId % MAXCORPUS) + 1) ) {
 				if(! tempIndex.isEmpty() ) {
 					System.out.println("Save partial index " + corpusId);
-					writer = createObjOutStream(corpusPrefix + String.format("%02d", corpusId) + ".idx");
+					writer = createObjOutStream(
+								corpusPrefix + String.format("%02d", corpusId) + "_"+round+".idx");
 					writer.writeObject(tempIndex);
 					writer.close();
 					writer = null;

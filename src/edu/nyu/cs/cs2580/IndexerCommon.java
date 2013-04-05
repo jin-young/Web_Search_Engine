@@ -25,7 +25,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
 	protected static final int MAXCORPUS = 30;
-	protected int DIV = 1000; // can be override
+	protected int DIV = 500; // can be override
 
 	protected SnowballStemmer _stemmer = new englishStemmer();
 
@@ -73,7 +73,7 @@ public abstract class IndexerCommon extends Indexer {
 
 		try {
 			if (count % DIV != 0) {
-				writeToFile(count / DIV);
+				writeToFile((count/DIV) +1);
 			}
 			writeDicToFile();
 		} catch (ClassNotFoundException e) {
