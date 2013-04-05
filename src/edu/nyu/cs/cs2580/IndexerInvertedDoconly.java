@@ -42,6 +42,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
+	/*
 	@Override
 	public void makeCorpusFiles() throws IOException {
 		// make corpus files
@@ -54,6 +55,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 			writer.close();
 		}
 	}
+	*/
 
 	/**
 	 * After making index files, save _dictionary into file
@@ -116,17 +118,18 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	// after 1000 documents processing, it saved in one file
 	// private int tmpId = 0;
 
+	/*
 	@SuppressWarnings("unchecked")
 	public void writeToFile(int fileIdx) throws IOException,
 			ClassNotFoundException {
 		if (_index.isEmpty())
 			return;
-		/*
-		 * String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
-		 * ObjectOutputStream writer = new ObjectOutputStream( new
-		 * FileOutputStream(indexFile)); writer.writeObject(_index);
-		 * _index.clear(); writer.close(); writer.flush();
-		 */
+		
+//		String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
+//		ObjectOutputStream writer = new ObjectOutputStream( new
+//		FileOutputStream(indexFile)); writer.writeObject(_index);
+//		_index.clear(); writer.close(); writer.flush();
+		
 		// tmpId++;
 
 		for (int i = 0; i < MAXCORPUS; i++) {
@@ -167,9 +170,10 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 			_tmpIndex.clear();
 		}
 	}
+	*/
 	
 	@Override
-	public void writeToFile() throws IOException, ClassNotFoundException {
+	public void writeToFile(int round) throws IOException, ClassNotFoundException {
 		throw new RuntimeException("Not implemented yet");
 	}
 

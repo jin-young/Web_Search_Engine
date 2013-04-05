@@ -1,7 +1,14 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,8 +49,6 @@ public abstract class IndexerCommon extends Indexer {
 	@Override
 	public void constructIndex() throws IOException {
 
-		makeCorpusFiles();
-
 		// Get All Files list in the Corpus Folder (data/wiki)
 		File folder = new File(_options._corpusPrefix);
 		File[] listOfFiles = folder.listFiles();
@@ -55,7 +60,7 @@ public abstract class IndexerCommon extends Indexer {
 				// write to file
 				if (count >= DIV && (count % DIV == 0)) {
 					try {
-						writeToFile();
+						writeToFile(count / DIV);
 					} catch (IOException ie) {
 						System.err.println(ie.getMessage());
 					} catch (ClassNotFoundException ce) {
@@ -68,18 +73,13 @@ public abstract class IndexerCommon extends Indexer {
 
 		try {
 			if (count % DIV != 0) {
-				writeToFile();
+				writeToFile(count / DIV);
 			}
 			writeDicToFile();
 		} catch (ClassNotFoundException e) {
 			System.err.println();
 		}
 	}
-
-	/**
-	 * Make New Corpus Files to save Index.
-	 **/
-	public abstract void makeCorpusFiles() throws IOException;
 
 	/**
 	 * Document processing must satisfy the following: 1) Non-visible page
@@ -133,7 +133,8 @@ public abstract class IndexerCommon extends Indexer {
 	/**
 	 * After 1000 document reading, input _index into file to flush memory
 	 **/
-	public abstract void writeToFile() throws IOException, ClassNotFoundException;
+	public abstract void writeToFile(int round) throws IOException,
+			ClassNotFoundException;
 
 	/**
 	 * After making index files, save _dictionary into file
@@ -223,7 +224,7 @@ public abstract class IndexerCommon extends Indexer {
 		}
 		return high;
 	}
-	
+
 	protected boolean equal(Vector<Integer> docs) {
 		int docid = docs.get(0);
 		for (int i = 1; i < docs.size(); i++) {
@@ -241,5 +242,14 @@ public abstract class IndexerCommon extends Indexer {
 				max = docs.get(i);
 		}
 		return max;
-	}	
+	}
+
+	protected ObjectOutputStream createObjOutStream(String filePath) throws FileNotFoundException, IOException {
+		return new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath), 1024));
+	}
+
+	protected ObjectInputStream createObjInStream(String filePath) throws FileNotFoundException, IOException 
+	{
+		return new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath), 1024));
+	}
 }
