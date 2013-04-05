@@ -1,6 +1,5 @@
 package edu.nyu.cs.cs2580;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -13,7 +12,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -129,9 +127,8 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	// after 1000 documents processing, it saved in one file
 	// private int tmpId = 0;
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public void writeToFile(int round) throws IOException, ClassNotFoundException {
+	public void writeToFile(int round) {
 		
 		Integer[] idxList = _index.keySet().toArray(new Integer[1]);
 		Arrays.sort(idxList, new Comparator<Integer>() {
@@ -152,11 +149,16 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			if( corpusId != (Math.abs(wId % MAXCORPUS) + 1) ) {
 				if(! tempIndex.isEmpty() ) {
 					System.out.println("Save partial index " + corpusId);
-					writer = createObjOutStream(
+					try {
+						writer = createObjOutStream(
 								corpusPrefix + String.format("%02d", corpusId) + "_"+round+".idx");
-					writer.writeObject(tempIndex);
-					writer.close();
-					writer = null;
+						writer.writeObject(tempIndex);
+						writer.close();
+						writer = null;
+					} catch (Exception e) {
+						e.printStackTrace();
+						throw new RuntimeException("Error during partial index writing");
+					}
 					
 					tempIndex.clear();
 					tempIndex = null;

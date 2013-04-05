@@ -8,7 +8,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Vector;
@@ -117,63 +116,8 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	// Wirte memory data into file
 	// after 1000 documents processing, it saved in one file
 	// private int tmpId = 0;
-
-	/*
-	@SuppressWarnings("unchecked")
-	public void writeToFile(int fileIdx) throws IOException,
-			ClassNotFoundException {
-		if (_index.isEmpty())
-			return;
-		
-//		String indexFile = _options._indexPrefix + "/tmp_" + fileIdx;
-//		ObjectOutputStream writer = new ObjectOutputStream( new
-//		FileOutputStream(indexFile)); writer.writeObject(_index);
-//		_index.clear(); writer.close(); writer.flush();
-		
-		// tmpId++;
-
-		for (int i = 0; i < MAXCORPUS; i++) {
-			// Read corpus file
-			String indexFile = _options._indexPrefix + "/corpus_" + i + ".idx";
-			ObjectInputStream reader = new ObjectInputStream(
-					new FileInputStream(indexFile));
-			System.out.println("Write " + indexFile);
-			Map<Integer, Vector<Integer>> _tmpIndex = (HashMap<Integer, Vector<Integer>>) reader
-					.readObject();
-			reader.close();
-
-			// processing
-			Iterator<String> it = _dictionary.keySet().iterator();
-			while (it.hasNext()) {
-				String key = (String) it.next();
-				int idx = _dictionary.get(key);
-				if (idx % MAXCORPUS == i) {
-					// look at this key is exist on the _index
-					if (_index.containsKey(idx)) {
-						// If there are no this key in the file
-						if (!_tmpIndex.containsKey(idx)) {
-							Vector<Integer> docList = new Vector<Integer>();
-							_tmpIndex.put(idx, docList);
-						}
-						_tmpIndex.get(idx).addAll(_index.get(idx));
-						_index.remove(idx);
-					}
-				}
-			}
-
-			// write corpus file
-			ObjectOutputStream writer = new ObjectOutputStream(
-					new FileOutputStream(indexFile));
-			writer.writeObject(_tmpIndex);
-			writer.close();
-			writer.flush();
-			_tmpIndex.clear();
-		}
-	}
-	*/
-	
 	@Override
-	public void writeToFile(int round) throws IOException, ClassNotFoundException {
+	public void writeToFile(int round) {
 		throw new RuntimeException("Not implemented yet");
 	}
 

@@ -59,26 +59,16 @@ public abstract class IndexerCommon extends Indexer {
 				processDocument(file);
 				// write to file
 				if (count >= DIV && (count % DIV == 0)) {
-					try {
-						writeToFile(count / DIV);
-					} catch (IOException ie) {
-						System.err.println(ie.getMessage());
-					} catch (ClassNotFoundException ce) {
-						System.err.println(ce.getMessage());
-					}
+					writeToFile(count / DIV);
 				}
 				count++;
 			}
 		}
 
-		try {
-			if (count % DIV != 0) {
-				writeToFile((count/DIV) +1);
-			}
-			writeDicToFile();
-		} catch (ClassNotFoundException e) {
-			System.err.println();
-		}
+		if (count % DIV != 0)
+			writeToFile((count/DIV) +1);
+		
+		writeDicToFile();
 	}
 
 	/**
@@ -133,8 +123,7 @@ public abstract class IndexerCommon extends Indexer {
 	/**
 	 * After 1000 document reading, input _index into file to flush memory
 	 **/
-	public abstract void writeToFile(int round) throws IOException,
-			ClassNotFoundException;
+	public abstract void writeToFile(int round);
 
 	/**
 	 * After making index files, save _dictionary into file

@@ -1,11 +1,6 @@
 package edu.nyu.cs.cs2580;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -32,7 +27,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 
 	private Map<Integer, ArrayList<Short>> _index;
 	private Map<Integer, ArrayList<Integer>> _skipPointer;
-	private Map<String, Integer> _sessionDictionary;
 
 	// Back-up variables for serializable file write.
 	protected Vector<Document> t_documents;
@@ -44,7 +38,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		super(options);
 		_index = new HashMap<Integer, ArrayList<Short>>();
 		_skipPointer = new HashMap<Integer, ArrayList<Integer>>();
-		_sessionDictionary = new TreeMap<String, Integer>();
 
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
@@ -315,7 +308,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	}
 
 	@Override
-	public void writeToFile(int round) throws IOException, ClassNotFoundException {
+	public void writeToFile(int round) {
 		if (_index.isEmpty())
 			return;
 		
@@ -341,10 +334,15 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			if( corpusId != (Math.abs(wordId % MAXCORPUS) + 1) ) {
 				if(! tempIndex.isEmpty() ) {
 					System.out.println("Save partial index " + corpusId);
-					writer = createObjOutStream(corpusPrefix + String.format("%02d", corpusId) + corpusSurfix);
-					writer.writeObject(tempIndex);
-					writer.close();
-					writer = null;
+					try {
+						writer = createObjOutStream(corpusPrefix + String.format("%02d", corpusId) + corpusSurfix);
+						writer.writeObject(tempIndex);
+						writer.close();
+						writer = null;
+					} catch (Exception e) {
+						e.printStackTrace();
+						throw new RuntimeException("Error during partial index writing");
+					}
 					
 					tempIndex.clear();
 					tempIndex = null;
