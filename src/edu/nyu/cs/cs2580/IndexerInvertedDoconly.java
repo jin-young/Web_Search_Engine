@@ -232,7 +232,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 		int pageNum = idx % MAXCORPUS;
 
 		// Read corpus file
-		String indexFile = _options._indexPrefix + "/corpus_" + pageNum
+		String indexFile = _options._indexPrefix + "/index_" + pageNum
 				+ ".idx";
 		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(
 				indexFile));

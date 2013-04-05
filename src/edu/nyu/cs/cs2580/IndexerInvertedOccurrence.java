@@ -368,7 +368,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		int pageNum = idx % MAXCORPUS;
 
 		// Read corpus file
-		String indexFile = _options._indexPrefix + "/corpus_" + pageNum
+		String indexFile = _options._indexPrefix + "/index_" + pageNum
 				+ ".idx";
 		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(
 				indexFile));
@@ -385,11 +385,62 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		}
 	}
 
-	@Override
-	public int corpusDocFrequencyByTerm(String term) {
-		return _dictionary.containsKey(term) ? _index
-				.get(_dictionary.get(term)).size() : 0;
-	}
+	/* 
+	 * Get Indexer for phrase           
+	 */
+    HashMap<Integer, ArrayList<Integer>> getPhraseIndex(String phrase){
+        Scanner scan = new Scanner(phrase);
+        HashMap<Integer, ArrayList<Integer>> docMap = new HashMap<Integer, ArrayList<Integer>>();
+        int termDistance = 0;
+        
+        while(scan.hasNext()){
+            String word = scan.next();
+            if(!_dictionary.containsKey(word))     return docMap;
+            int idx = _dictionary.get(word);
+            
+            if(docMap.isEmpty())      // If this is first word of phrase
+                    docMap = _index.get(idx);
+            else{
+                HashMap<Integer, ArrayList<Integer>> curDocList = _index.get(idx);
+                Set<Integer> docIDSet = docMap.keySet();
+                
+                for(Integer docID : docIDSet){
+                    if(curDocList.containsKey(docID)){
+                        ArrayList<Integer> firstTermAppear = docMap.get(docID);
+                        ArrayList<Integer> curTermAppear = curDocList.get(docID);
+                 
+                        for(int i=0; i<firstTermAppear.size(); i++){
+                            boolean isFound = false;
+                            for(int j=0; j<curTermAppear.size(); j++){
+                                if(firstTermAppear.get(i) + termDistance == curTermAppear.get(j)){
+                                    isFound = true;
+                                    break;
+                                }
+                            }
+                            if(!isFound){
+                                firstTermAppear.remove(i);
+                                i--;
+                            }       
+                        }
+                    }else{
+                        docMap.remove(docID);
+                    }
+                }
+            }
+            termDistance++;
+        }
+        return docMap;
+    }
+    
+    @Override
+    public int corpusDocFrequencyByTerm(String term) {
+        if(term.contains(" ")){ // Phrase
+            HashMap<Integer, ArrayList<Integer>> docList = getPhraseIndex(term);
+            return docList.size();
+        }else{ // Word
+            return _dictionary.containsKey(term) ? _index.get(_dictionary.get(term)).size() : 0;
+        }
+    }
 
 	@Override
 	public int corpusTermFrequency(String term) {
