@@ -24,7 +24,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
 	protected static final int MAXCORPUS = 30;
-	protected int DIV = 300; // can be override
+	protected int DIV = 500; // can be override
 
 	protected SnowballStemmer _stemmer = new englishStemmer();
 

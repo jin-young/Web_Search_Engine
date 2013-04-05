@@ -12,7 +12,7 @@ buildindex: compile
 --mode=index --options=conf/engine.conf
 
 clean:
-	find ./src -type f -name "*.class" -delete; find ./test -type f -name "*.class" -delete
+	find ./src -type f -name "*.class" -delete; find ./test -type f -name "*.class" -delete; rm -rf ./data/index/*
 
 jtest: jtest_compile
 	java -cp ./src:./test:./libs/jsoup-1.7.2.jar:$(TEST_LIBS) org.junit.runner.JUnitCore edu.nyu.cs.cs2580.IndexerInvertedCompressedTest

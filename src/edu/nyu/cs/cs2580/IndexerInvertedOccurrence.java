@@ -140,13 +140,13 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			
 		});
 		
-		int corpusId = Math.abs(idxList[0] % MAXCORPUS) + 1;
+		int corpusId = Math.abs(idxList[0] % MAXCORPUS);
 		ObjectOutputStream writer = null;
 		
 		Map<Integer, HashMap<Integer, ArrayList<Integer>>> tempIndex = null;
 
 		for(int wId : idxList) {
-			if( corpusId != (Math.abs(wId % MAXCORPUS) + 1) ) {
+			if( corpusId != Math.abs(wId % MAXCORPUS) ) {
 				if(! tempIndex.isEmpty() ) {
 					System.out.println("Writing partial index " + corpusId);
 					try {
@@ -163,7 +163,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 					tempIndex = null;
 				}
 				
-				corpusId = Math.abs(wId % MAXCORPUS) + 1;
+				corpusId = Math.abs(wId % MAXCORPUS);
 			}
 			
 			if(tempIndex == null) {
@@ -181,7 +181,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
     protected void mergePartialIndex(int lastRound) {
         ObjectInputStream reader = null;
         
-        for(int idx = 1; idx < MAXCORPUS; idx++) {
+        for(int idx = 0; idx < MAXCORPUS; idx++) {
             Map<Integer, Map<Integer, ArrayList<Integer>>> finalIndex = 
                     new HashMap<Integer, Map<Integer, ArrayList<Integer>>>();
             
