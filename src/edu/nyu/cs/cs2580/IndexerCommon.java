@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -25,7 +24,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public abstract class IndexerCommon extends Indexer {
 	protected static final int MAXCORPUS = 30;
-	protected int DIV = 500; // can be override
+	protected int DIV = 300; // can be override
 
 	protected SnowballStemmer _stemmer = new englishStemmer();
 
@@ -65,13 +64,31 @@ public abstract class IndexerCommon extends Indexer {
 			}
 		}
 
-		if (count % DIV != 0)
+		int lastRound;
+		if (count % DIV != 0) {
+		    lastRound = (count/DIV) +1;
 			writeToFile((count/DIV) +1);
+		} else {
+		    lastRound = count/DIV;
+		}
+		
+		mergePartialIndex(lastRound);
 		
 		writeDicToFile();
 	}
+	
+	protected String getPartialIndexName(int idx, int round) {
+	    String indexPrefix = _options._indexPrefix + "/index_";
+	    return indexPrefix + String.format("%02d", idx) + "_" + round + ".idx";
+	}
+	protected String getPartialIndexName(int idx) {
+        String indexPrefix = _options._indexPrefix + "/index_";
+        return indexPrefix + String.format("%02d", idx) + ".idx";
+    }
 
-	/**
+	protected abstract void mergePartialIndex(int lastRound);
+
+    /**
 	 * Document processing must satisfy the following: 1) Non-visible page
 	 * content is removed, e.g., those inside <script> tags 2) Tokens are
 	 * stemmed with Step 1 of the Porter's algorithm 3) No stop word is removed,
@@ -233,12 +250,46 @@ public abstract class IndexerCommon extends Indexer {
 		return max;
 	}
 
-	protected ObjectOutputStream createObjOutStream(String filePath) throws FileNotFoundException, IOException {
-		return new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath), 1024));
+	protected ObjectOutputStream createObjOutStream(String filePath) {
+		try {
+            return new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath), 1024));
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during object output stream creation");
+        }
 	}
 
-	protected ObjectInputStream createObjInStream(String filePath) throws FileNotFoundException, IOException 
+	protected ObjectInputStream createObjInStream(String filePath) 
 	{
-		return new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath), 1024));
+		try {
+            return new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath), 1024));
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during object output stream creation");
+        }
 	}
+	
+   protected void writeFinalINdex(int idx, Object target) {
+        //write final index
+        ObjectOutputStream writer = null;
+        try {
+            System.out.println("Writing final index " + idx);
+            writer = createObjOutStream(getPartialIndexName(idx));
+            writer.writeObject(target);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during writing final index");
+        }
+    }
+	
+	protected void cleaningPartialIndex(int idx, int lastRound) {
+        System.out.println("Cleaning partial index files");
+        for(int round=1; round <= lastRound; round++) {
+            File partialIdx = new File(getPartialIndexName(idx, round));
+            if(partialIdx.exists()) {
+                partialIdx.delete();
+            }
+        }
+    }
 }

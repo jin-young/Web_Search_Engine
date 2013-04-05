@@ -265,4 +265,9 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	public int documentTermFrequency(String term, String url) {
 		return 1;
 	}
+
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+        throw new RuntimeException("Not implemented yet");
+    }
 }

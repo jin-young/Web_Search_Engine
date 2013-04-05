@@ -1,6 +1,7 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -142,16 +143,14 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		int corpusId = Math.abs(idxList[0] % MAXCORPUS) + 1;
 		ObjectOutputStream writer = null;
 		
-		String corpusPrefix = _options._indexPrefix + "/index_";
 		Map<Integer, HashMap<Integer, ArrayList<Integer>>> tempIndex = null;
 
 		for(int wId : idxList) {
 			if( corpusId != (Math.abs(wId % MAXCORPUS) + 1) ) {
 				if(! tempIndex.isEmpty() ) {
-					System.out.println("Save partial index " + corpusId);
+					System.out.println("Writing partial index " + corpusId);
 					try {
-						writer = createObjOutStream(
-								corpusPrefix + String.format("%02d", corpusId) + "_"+round+".idx");
+						writer = createObjOutStream(getPartialIndexName(corpusId, round));
 						writer.writeObject(tempIndex);
 						writer.close();
 						writer = null;
@@ -165,7 +164,6 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 				}
 				
 				corpusId = Math.abs(wId % MAXCORPUS) + 1;
-				System.out.println("Let start corpus " + corpusId);
 			}
 			
 			if(tempIndex == null) {
@@ -177,7 +175,61 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		
 		_index.clear();
 	}
-
+	
+	@SuppressWarnings("unchecked")
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+        ObjectInputStream reader = null;
+        
+        for(int idx = 1; idx < MAXCORPUS; idx++) {
+            Map<Integer, Map<Integer, ArrayList<Integer>>> finalIndex = 
+                    new HashMap<Integer, Map<Integer, ArrayList<Integer>>>();
+            
+            for(int round=1; round <= lastRound; round++) {
+                File partialIdx = new File(getPartialIndexName(idx, round));
+                if(partialIdx.exists()) {
+                    System.out.println("Merging partial index " + idx + " of round " + round);
+                    reader = createObjInStream(partialIdx.getAbsolutePath());
+                    try {
+                        Map<Integer, Map<Integer, ArrayList<Integer>>> pIdx = 
+                                (Map<Integer, Map<Integer, ArrayList<Integer>>>)reader.readObject();
+                        for(int wordId : pIdx.keySet()) {
+                            if(finalIndex.containsKey(wordId)) {
+                                Map<Integer, ArrayList<Integer>> old = finalIndex.get(wordId);
+                                Map<Integer, ArrayList<Integer>> curr = pIdx.get(wordId);
+                                
+                                for(int docId : curr.keySet()) {
+                                    if(old.containsKey(docId)) {
+                                        ArrayList<Integer> oldPositions = old.get(docId);
+                                        ArrayList<Integer> currPositions = curr.get(docId);
+                                        
+                                        oldPositions.addAll(currPositions);
+                                        
+                                        //do we need below line, really?
+                                        old.put(docId, oldPositions);
+                                    } else {
+                                        old.put(docId, curr.get(docId));
+                                    }
+                                }
+                                
+                                //do we need below line, really, again?
+                                finalIndex.put(wordId, old);
+                            } else {
+                                finalIndex.put(wordId, pIdx.get(wordId));
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("Error during reading partial index");
+                    }
+                }
+            }
+            
+            writeFinalINdex(idx, finalIndex);
+            cleaningPartialIndex(idx, lastRound);
+        }
+    }
+	
 	@Override
 	public void loadIndex() throws IOException, ClassNotFoundException {
 		// Load Documents file

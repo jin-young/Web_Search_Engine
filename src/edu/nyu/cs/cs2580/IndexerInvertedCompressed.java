@@ -496,4 +496,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	protected int howManyAppeared(int positionOfDocId, ArrayList<Short> docMap) {
 		return decodeVbyte(nextPosition(positionOfDocId, docMap), docMap);
 	}
+
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+        // TODO Auto-generated method stub
+        
+    }
 }
