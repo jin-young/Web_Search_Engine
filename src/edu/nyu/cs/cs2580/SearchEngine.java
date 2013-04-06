@@ -46,6 +46,13 @@ public class SearchEngine {
 
         // The specific Indexer to be used.
         public String _indexerType = null;
+        
+        // The specific logminer to be used.
+        public String _logMinerType = null;
+        
+        // The specific logminer to be used.
+        public String _logPrefix = null;
+        
 
         // Additional group specific configuration can be added below.
 
@@ -84,6 +91,8 @@ public class SearchEngine {
             // Populate specific options.
             _indexerType = options.get("indexer_type");
             Check(_indexerType != null, "Missing option: indexer_type!");
+            _logMinerType = options.get("log_miner_type");
+            Check(_logMinerType != null, "Missing option: _logMinerType!");
         }
     }
 
