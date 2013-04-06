@@ -291,18 +291,12 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	}
 
 	public int next_pos(String term, int docid, int pos) {
-		try {
-			int idx = _dictionary.get(term);
-			HashMap<Integer, ArrayList<Integer>> docMap = getDocMap(idx);
-			ArrayList<Integer> posList = docMap.get(docid);
-			for (int i = 0; i < posList.size(); i++) {
-				if (posList.get(i) > pos)
-					return posList.get(i);
-			}
-		} catch (IOException ie) {
-			System.err.println(ie.getMessage());
-		} catch (ClassNotFoundException ce) {
-			System.err.println(ce.getMessage());
+		int idx = _dictionary.get(term);
+		HashMap<Integer, ArrayList<Integer>> docMap = getDocMap(idx);
+		ArrayList<Integer> posList = docMap.get(docid);
+		for (int i = 0; i < posList.size(); i++) {
+			if (posList.get(i) > pos)
+				return posList.get(i);
 		}
 		return -1;
 	}
@@ -359,8 +353,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	 * @return Vector<Integer> Document List
 	 **/
 	@SuppressWarnings("unchecked")
-	private HashMap<Integer, ArrayList<Integer>> getDocMap(int idx)
-			throws IOException, ClassNotFoundException {
+	private HashMap<Integer, ArrayList<Integer>> getDocMap(int idx){
 
 		if (_index.containsKey(idx))
 			return _index.get(idx);
@@ -370,12 +363,17 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		// Read corpus file
 		String indexFile = _options._indexPrefix + "/index_" + String.format("%02d", pageNum)
 				+ ".idx";
-		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(
-				indexFile));
-		HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _tmpIndex = (HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>) reader
-				.readObject();
-		reader.close();
-
+		
+		HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _tmpIndex
+		        = new HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>();
+		try{
+    		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(	indexFile));
+    		_tmpIndex = (HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>) reader.readObject();
+    		reader.close();
+		}catch(Exception e){
+		    System.err.print(e.getMessage());
+		}
+		
 		if (!_tmpIndex.containsKey(idx))
 			return new HashMap<Integer, ArrayList<Integer>>();
 		else {
@@ -399,9 +397,9 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
             int idx = _dictionary.get(word);
             
             if(docMap.isEmpty())      // If this is first word of phrase
-                    docMap = _index.get(idx);
+                    docMap = getDocMap(idx);
             else{
-                HashMap<Integer, ArrayList<Integer>> curDocList = _index.get(idx);
+                HashMap<Integer, ArrayList<Integer>> curDocList = getDocMap(idx);
                 Set<Integer> docIDSet = docMap.keySet();
                 
                 for(Integer docID : docIDSet){
@@ -432,47 +430,74 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
         return docMap;
     }
     
+    /*
+     * Corpus Doc Frequency By Term
+     * param : String term
+     * return : total # of documents with term
+     */
     @Override
     public int corpusDocFrequencyByTerm(String term) {
+        HashMap<Integer, ArrayList<Integer>> docMap = null;
         if(term.contains(" ")){ // Phrase
-            HashMap<Integer, ArrayList<Integer>> docList = getPhraseIndex(term);
-            return docList.size();
+            docMap = getPhraseIndex(term);
+            return docMap.size();
         }else{ // Word
-            return _dictionary.containsKey(term) ? _index.get(_dictionary.get(term)).size() : 0;
+            if(!_dictionary.containsKey(term))
+                return 0;
+            int idx = _dictionary.get(term);
+            docMap = getDocMap(idx);
+            return docMap.size();
         }
     }
 
+    /*
+     * Corpus Term Frequency
+     * param : String term
+     * return : total # of term appearance in corpus
+     */
 	@Override
 	public int corpusTermFrequency(String term) {
 		int count = 0;
-		if (_dictionary.containsKey(term)) {
-			int idx = _dictionary.get(term);
-			HashMap<Integer, ArrayList<Integer>> docMap = _index.get(idx);
-			Set<Integer> keySet = docMap.keySet();
-
-			for (Integer key : keySet) {
-				count += docMap.get(key).size();
-			}
+		HashMap<Integer, ArrayList<Integer>> docMap = null; 
+		if(term.contains(" ")){ // Phrase
+		    docMap = getPhraseIndex(term);		    
+		}else{ // Word
+		    if (!_dictionary.containsKey(term))
+		        return 0;
+            int idx = _dictionary.get(term);
+            docMap = getDocMap(idx);
 		}
+		Set<Integer> keySet = docMap.keySet();
+        for (Integer key : keySet) {
+            count += docMap.get(key).size();
+        }
 		return count;
 	}
 
+	/*
+     * Document Term Frequency
+     * param : String term, String url
+     * return : total # of term appearance in a document
+     */
 	@Override
 	public int documentTermFrequency(String term, String url) {
-		int docid = 0;
+		// Get Document ID relating this url
+	    int docid = 0;
 		for (Document doc : _documents) {
 			if (doc.getUrl().equals(url))
 				docid = doc._docid;
 		}
-		int idx = _dictionary.get(term);
+		
+		// Get Document Map
 		HashMap<Integer, ArrayList<Integer>> docMap = null;
-		try {
-			docMap = getDocMap(idx);
-		} catch (IOException ie) {
-			System.err.println(ie.getMessage());
-		} catch (ClassNotFoundException ce) {
-			System.err.println(ce.getMessage());
-		}
+		if(term.contains(" ")){ // Phrase
+            docMap = getPhraseIndex(term);          
+        }else{ // Word
+            if (!_dictionary.containsKey(term))
+                return 0;
+            int idx = _dictionary.get(term);
+            docMap = getDocMap(idx);
+        }
 		return docMap.get(docid).size();
 	}
 }
