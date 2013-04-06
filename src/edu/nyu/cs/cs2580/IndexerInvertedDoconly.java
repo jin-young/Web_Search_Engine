@@ -1,12 +1,15 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -40,21 +43,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 		super(options);
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
-
-	/*
-	@Override
-	public void makeCorpusFiles() throws IOException {
-		// make corpus files
-		for (int i = 0; i < MAXCORPUS; i++) {
-			String indexFile = _options._indexPrefix + "/corpus_" + i + ".idx";
-			ObjectOutputStream writer = new ObjectOutputStream(
-					new FileOutputStream(indexFile));
-			Map<Integer, Vector<Integer>> _tmpIndex = new HashMap<Integer, Vector<Integer>>();
-			writer.writeObject(_tmpIndex);
-			writer.close();
-		}
-	}
-	*/
 
 	/**
 	 * After making index files, save _dictionary into file
@@ -118,8 +106,92 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	// private int tmpId = 0;
 	@Override
 	public void writeToFile(int round) {
-		throw new RuntimeException("Not implemented yet");
+	    Integer[] idxList = _index.keySet().toArray(new Integer[1]);
+        Arrays.sort(idxList, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return Math.abs(o1.intValue() % MAXCORPUS) - Math.abs(o2.intValue() % MAXCORPUS);
+            }
+            
+        });
+        
+        int corpusId = Math.abs(idxList[0] % MAXCORPUS);
+        ObjectOutputStream writer = null;
+        
+        Map<Integer, Vector<Integer>> tempIndex = null;
+
+        for(int wId : idxList) {
+            if( corpusId != Math.abs(wId % MAXCORPUS) ) {
+                if(! tempIndex.isEmpty() ) {
+                    System.out.println("Writing partial index " + corpusId);
+                    try {
+                        writer = createObjOutStream(getPartialIndexName(corpusId, round));
+                        writer.writeObject(tempIndex);
+                        writer.close();
+                        writer = null;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("Error during partial index writing");
+                    }
+                    
+                    tempIndex.clear();
+                    tempIndex = null;
+                }
+                
+                corpusId = Math.abs(wId % MAXCORPUS);
+            }
+            
+            if(tempIndex == null) {
+                tempIndex = new HashMap<Integer, Vector<Integer>>();
+            }
+            
+            tempIndex.put(wId, _index.remove(wId));
+        }
+        
+        _index.clear();
 	}
+	
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+        ObjectInputStream reader = null;
+        
+        for(int idx = 0; idx < MAXCORPUS; idx++) {
+            Map<Integer, Vector<Integer>> finalIndex = 
+                    new HashMap<Integer, Vector<Integer>>();
+            
+            for(int round=1; round <= lastRound; round++) {
+                File partialIdx = new File(getPartialIndexName(idx, round));
+                if(partialIdx.exists()) {
+                    System.out.println("Merging partial index " + idx + " of round " + round);
+                    reader = createObjInStream(partialIdx.getAbsolutePath());
+                    try {
+                        Map<Integer, Vector<Integer>> pIdx = 
+                                (Map<Integer, Vector<Integer>>)reader.readObject();
+                        for(int wordId : pIdx.keySet()) {
+                            if(finalIndex.containsKey(wordId)) {
+                                Vector<Integer> old = finalIndex.get(wordId);
+                                Vector<Integer> curr = pIdx.get(wordId);
+                                
+                                old.addAll(curr);
+                                
+                                //do we need below line, really, again?
+                                finalIndex.put(wordId, old);
+                            } else {
+                                finalIndex.put(wordId, pIdx.get(wordId));
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("Error during reading partial index");
+                    }
+                }
+            }
+            
+            writeFinalINdex(idx, finalIndex);
+            cleaningPartialIndex(idx, lastRound);
+        }
+    }	
 
 	@Override
 	public void loadIndex() throws IOException, ClassNotFoundException {
@@ -267,9 +339,4 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	public int documentTermFrequency(String term, String url) {
 		return 1;
 	}
-
-    @Override
-    protected void mergePartialIndex(int lastRound) {
-        throw new RuntimeException("Not implemented yet");
-    }
 }
