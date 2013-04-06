@@ -282,43 +282,8 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	    
 	    int result = (nextDocId == Integer.MAX_VALUE) ? -1 : nextDocId;
 	    return result;
-	    
-		/*
-	    int docidVerify = nextDoc(query, docid - 1)._docid;
-		if (docidVerify != docid)
-			return -1;
-
-		Vector<Integer> posList = new Vector<Integer>();
-		for (int i = 0; i < query._tokens.size(); i++) {
-			int tmpPos = next_pos(query._tokens.get(i), docid, pos);
-			if (tmpPos == -1)
-				return -1;
-			posList.add(tmpPos);
-		}
-		boolean isSuccess = true;
-		for (int i = 1; i < posList.size(); i++)
-			if (posList.get(i - 1) + 1 != posList.get(i))
-				isSuccess = false;
-		if (isSuccess)
-			return posList.get(0);
-		return nextPhrase(query, docid, posList.get(1));
-		*/
 	}
-
-	/*
-	public int next_pos(String term, int docid, int pos) {
-	    if(!_dictionary.containsKey(term))  return -1;
-		int idx = _dictionary.get(term);
-		HashMap<Integer, ArrayList<Integer>> docMap = getDocMap(idx);
-		ArrayList<Integer> posList = docMap.get(docid);
-		for (Integer next : posList)
-			if (next > pos)
-				return next;
-		
-		return -1;
-	}
-	*/
-
+	
 	@Override
 	public Document nextDoc(Query query, int curDocId) {
 		Vector<Integer> _nextDocIds = new Vector<Integer>();
