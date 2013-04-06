@@ -1,6 +1,11 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.Serializable;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * The basic implementation of a Document.  Only the most basic information are
@@ -9,87 +14,94 @@ import java.io.Serializable;
  * 
  * In HW1: instructors provide {@link DocumentFull}.
  * 
- * In HW2: student must implement the more efficient {@link DocumentIndexed}.
+ * In HW2: students must implement the more efficient {@link DocumentIndexed}.
+ * 
+ * In HW3: students must incorporate the PageRank and NumViews based on corpus
+ * and log analyses.
  * 
  * @author fdiaz
  * @author congyu
  */
 class Document implements Serializable {
-    private static final long serialVersionUID = -539495106357836976L;
+  private static final long serialVersionUID = -539495106357836976L;
 
-    public int _docid;
+  /**
+   * A simple checker to see if a given document is present in our corpus.
+   * This is provided for illustration only.
+   */
+  public static class HeuristicDocumentChecker {
+    private static MessageDigest MD = null;
 
-    // Basic information for display
-    private String _title = "";
-    private String _url = "";
-  
-    // Basic information for ranking
-    private float _pageRank = 0.0f;
-    private int _numViews = 0;
-  
-    private String _line = "";
+    private Set<BigInteger> _docsInCorpus = null;
 
-    public Document(int docid) {
-	_docid = docid;
+    public HeuristicDocumentChecker() throws NoSuchAlgorithmException {
+      if (MD == null) {
+        MD = MessageDigest.getInstance("MD5");
+      }
+      _docsInCorpus = new HashSet<BigInteger>();
     }
-  
-    public Document(int docid, String line) {
-	this(docid);
-	setLine(line);
+    
+    public void addDoc(String name) {
+      if (MD != null) {
+        _docsInCorpus.add(new BigInteger(MD.digest(name.getBytes())));
+      }
     }
+    
+    public int getNumDocs() {
+      return _docsInCorpus.size();
+    }
+    
+    public boolean checkDoc(String name) {
+      if (MD == null) {
+        return false;
+      }
+      return _docsInCorpus.contains(new BigInteger(MD.digest(name.getBytes())));
+    }
+  }
 
-    public String getTitle() {
-	return _title;
-    }
+  public int _docid;
 
-    public void setTitle(String title) {
-	this._title = title;
-    }
+  // Basic information for display
+  private String _title = "";
+  private String _url = "";
 
-    public String getUrl() {
-	return _url;
-    }
+  // Basic information for ranking
+  private float _pageRank = 0.0f;
+  private int _numViews = 0;
 
-    public void setUrl(String url) {
-	this._url = url;
-    }
+  public Document(int docid) {
+    _docid = docid;
+  }
 
-    public float getPageRank() {
-	return _pageRank;
-    }
+  public String getTitle() {
+    return _title;
+  }
 
-    public void setPageRank(float pageRank) {
-	this._pageRank = pageRank;
-    }
+  public void setTitle(String title) {
+    this._title = title;
+  }
 
-    public int getNumViews() {
-	return _numViews;
-    }
+  public String getUrl() {
+    return _url;
+  }
 
-    public void setNumViews(int numViews) {
-	this._numViews = numViews;
-    }
+  public void setUrl(String url) {
+    this._url = url;
+  }
 
-    public String getLine() {
-	return _line;
-    }
+  public float getPageRank() {
+    return _pageRank;
+  }
 
-    public void setLine(String _line) {
-	this._line = _line;
-    }
+  public void setPageRank(float pageRank) {
+    this._pageRank = pageRank;
+  }
 
-    public static int documentFrequency(String s) {
-	// TODO Auto-generated method stub
-	return 0;
-    }
+  public int getNumViews() {
+    return _numViews;
+  }
 
-    public static int termFrequency(String s) {
-	// TODO Auto-generated method stub
-	return 0;
-    }
-
-    public static int termFrequency() {
-	// TODO Auto-generated method stub
-	return 0;
-    }
+  public void setNumViews(int numViews) {
+    this._numViews = numViews;
+  }
 }
