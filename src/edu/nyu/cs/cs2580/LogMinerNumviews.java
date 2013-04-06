@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -54,25 +55,22 @@ public class LogMinerNumviews extends LogMiner {
 			}
 		}
 		
-		BufferedReader br = new BufferedReader(new FileReader(path));
+		BufferedReader read = new BufferedReader(new FileReader(path));
 		String line;
-		int id=0;
 
-		while ((line = br.readLine()) != null) {
-		   String[] lineSplit = line.split("\\s+");
+		while ((line = read.readLine()) != null) {
+		   String[] lineSplit = line.split(" ");
 		   if(lineSplit.length == 3){
 			   try{
-			   String in = URLDecoder.decode(lineSplit[1], "UTF-8");
-			   if(pages.containsKey(in))
-				   id = pages.get(in);
-			   //Modify lineSplit[1] to remove special characters
-			   numViews.put(id, numViews.get(id)+Integer.parseInt(lineSplit[2]));
+			   String temp = URLDecoder.decode(lineSplit[1], "UTF-8");
+			   if(_numview.containsKey(temp))
+			   _numview.put(temp, _numview.get(temp)+Integer.parseInt(lineSplit[2]));
 			   } catch(IllegalArgumentException e){
 
 			   }
 		   }
 		}
-		br.close();
+		read.close();
 		
 
 		return;
@@ -90,11 +88,4 @@ public class LogMinerNumviews extends LogMiner {
 		return null;
 	}
 
-	/**
-	 * Document processing must satisfy the following: 1) Non-visible page
-	 * content is removed, e.g., those inside <script> tags 2) Tokens are
-	 * stemmed with Step 1 of the Porter's algorithm 3) No stop word is removed,
-	 * you need to dynamically determine whether to drop the processing of a
-	 * certain inverted list.
-	 */
 }
