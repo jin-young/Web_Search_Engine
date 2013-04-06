@@ -63,6 +63,7 @@ public class SearchEngine {
 		// The specific LogMiner to be used.
 		public String _logMinerType = null;
 
+
 		/**
 		 * Constructor for options.
 		 * 
@@ -108,6 +109,9 @@ public class SearchEngine {
 
 			_logMinerType = options.get("log_miner_type");
 			Check(_logMinerType != null, "Missing option: log_miner_type!");
+			
+			_logPrefix = options.get("log_prefix");
+			Check(_logPrefix != null, "Missing option: log_prefix!");
 		}
 	}
 

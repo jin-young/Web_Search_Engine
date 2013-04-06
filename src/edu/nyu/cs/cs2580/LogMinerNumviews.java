@@ -1,6 +1,8 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,6 +53,27 @@ public class LogMinerNumviews extends LogMiner {
 				_numview.put(file.getName(), 0);
 			}
 		}
+		
+		BufferedReader br = new BufferedReader(new FileReader(path));
+		String line;
+		int id=0;
+
+		while ((line = br.readLine()) != null) {
+		   String[] lineSplit = line.split("\\s+");
+		   if(lineSplit.length == 3){
+			   try{
+			   String in = URLDecoder.decode(lineSplit[1], "UTF-8");
+			   if(pages.containsKey(in))
+				   id = pages.get(in);
+			   //Modify lineSplit[1] to remove special characters
+			   numViews.put(id, numViews.get(id)+Integer.parseInt(lineSplit[2]));
+			   } catch(IllegalArgumentException e){
+
+			   }
+		   }
+		}
+		br.close();
+		
 
 		return;
 	}
