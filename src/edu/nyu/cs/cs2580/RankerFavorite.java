@@ -28,7 +28,7 @@ public class RankerFavorite extends Ranker {
         DocumentIndexed doc = null;
         int docid = -1;
         while ((doc = (DocumentIndexed) _indexer.nextDoc(query, docid)) != null) {
-            // Process Phrase search
+
             if (!docList.contains(doc)) {
                 rankList.add(scoreDocument(query, doc));
                 docList.add(doc);

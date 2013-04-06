@@ -149,8 +149,11 @@ public abstract class IndexerCommon extends Indexer {
 
 	/**
 	 * Next Phrase position
+	 * @param query (contain phrase)
+	 * @param document id
+	 * @param current position
 	 **/
-	public abstract int nextPhrase(Query query, int docid, int pos);
+	public abstract int nextPhrase(String phrase, int docid);
 
 	/**
 	 * Make Index with content string of html.
@@ -186,11 +189,10 @@ public abstract class IndexerCommon extends Indexer {
 		int idx = _dictionary.get(word);
 
 		Vector<Integer> docList = retriveDocList(word);
-		int lt = docList.size() - 1;
+		int lt = docList.size()-1;
 
-		if (docList.size() <= 1 || docList.lastElement() <= current) {
+		if (docList.isEmpty() || docList.lastElement() <= current) 
 			return -1;
-		}
 
 		if (docList.firstElement() > current) {
 			_cachedIndex.put(idx, 1);
@@ -198,9 +200,9 @@ public abstract class IndexerCommon extends Indexer {
 		}
 
 		if (_cachedIndex.containsKey(idx) && _cachedIndex.get(idx) > 1
-				&& docList.get(_cachedIndex.get(idx) - 1) <= current) {
+				&& docList.get(_cachedIndex.get(idx) - 1) <= current) 
 			low = _cachedIndex.get(idx) - 1;
-		} else
+		else
 			low = 1;
 
 		jump = 1;
@@ -218,8 +220,7 @@ public abstract class IndexerCommon extends Indexer {
 		return docList.get(_cachedIndex.get(idx));
 	}
 
-	protected int binarySearch(Vector<Integer> docList, int low, int high,
-			int current) {
+	protected int binarySearch(Vector<Integer> docList, int low, int high, int current) {
 		int mid;
 		while (high - low > 1) {
 			mid = (int) ((low + high) / 2.0);
@@ -232,13 +233,13 @@ public abstract class IndexerCommon extends Indexer {
 	}
 
 	protected boolean equal(Vector<Integer> docs) {
-		int docid = docs.get(0);
-		for (int i = 1; i < docs.size(); i++) {
-			if (docs.get(i) != docid) {
-				return false;
-			}
-		}
-		return true;
+	    if(docs.isEmpty())
+	        return false;
+	    int docid = docs.get(0);
+	    for(int comp : docs)
+	        if(comp != docid)  
+	            return false;
+	    return true;
 	}
 
 	protected int Max(Vector<Integer> docs) {

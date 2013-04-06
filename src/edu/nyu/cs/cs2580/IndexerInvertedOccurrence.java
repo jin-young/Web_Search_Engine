@@ -27,13 +27,12 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		Serializable {
 	private static final long serialVersionUID = 1077111905740085030L;
 
-	// Inverted Index,
-	// key is the integer representation of the term
-	// value is HashMap
-	// key is the Document ID
-	// Value is occurrence position list.
+	// Inverted Index : ( term key, (document id, (appearance positions) ) )
 	private HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> _index = new HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>();
 
+	// Phrase document list : (phrase, (document id, (appearance positions) ) )  
+	private HashMap<String, HashMap<Integer, ArrayList<Integer>>> _phraseDocMap = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
+	
 	// Back-up variables for serializable file write.
 	protected Vector<Document> t_documents;
 	protected Map<String, Integer> t_dictionary;
@@ -124,10 +123,11 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		return tokenSize;
 	}
 
-	// Write memory data into file
-	// after 1000 documents processing, it saved in one file
-	// private int tmpId = 0;
-
+	/*
+	 *  Write memory data into file
+	 * after 1000 documents processing, it saved in one file
+	 * private int tmpId = 0;
+	 */
 	@Override
 	public void writeToFile(int round) {
 		
@@ -267,72 +267,53 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 
 	/**
 	 * In HW2, you should be using {@link DocumentIndexed}.
+	 * @param  phrase
+	 * @param  current document id
+	 * @return  next document id
 	 */
 	@Override
-	public int nextPhrase(Query query, int docid, int pos) {
-		int docidVer = nextDoc(query, docid - 1)._docid;
-		if (docidVer != docid)
-			return -1;
-
-		Vector<Integer> posList = new Vector<Integer>();
-		for (int i = 0; i < query._tokens.size(); i++) {
-			int tmpPos = next_pos(query._tokens.get(i), docid, pos);
-			if (tmpPos == -1)
-				return -1;
-			posList.add(tmpPos);
-		}
-		boolean isSuccess = true;
-		for (int i = 1; i < posList.size(); i++)
-			if (posList.get(i - 1) + 1 != posList.get(i))
-				isSuccess = false;
-		if (isSuccess)
-			return posList.get(0);
-		return nextPhrase(query, docid, posList.get(1));
+	public int nextPhrase(String phrase, int docId) {
+	    HashMap<Integer, ArrayList<Integer>> phraseDocMap = getPhraseDocMap(phrase);
+	    Set<Integer> keySet = phraseDocMap.keySet();
+	    int nextDocId = Integer.MAX_VALUE;
+	    for(Integer key : keySet)
+	        if(key.intValue() > docId && key.intValue() < nextDocId)
+	            nextDocId = key.intValue();
+	    
+	    int result = (nextDocId == Integer.MAX_VALUE) ? -1 : nextDocId;
+	    return result;
 	}
-
-	public int next_pos(String term, int docid, int pos) {
-		int idx = _dictionary.get(term);
-		HashMap<Integer, ArrayList<Integer>> docMap = getDocMap(idx);
-		ArrayList<Integer> posList = docMap.get(docid);
-		for (int i = 0; i < posList.size(); i++) {
-			if (posList.get(i) > pos)
-				return posList.get(i);
-		}
-		return -1;
-	}
-
+	
 	@Override
-	public Document nextDoc(Query query, int docid) {
-		Vector<Integer> docs = new Vector<Integer>();
-		int doc = -1;
+	public Document nextDoc(Query query, int curDocId) {
+		Vector<Integer> _nextDocIds = new Vector<Integer>();
+		int nextDocId = -1;
 
 		// find next document for each query
-		for (int i = 0; i < query._tokens.size(); i++) {
+		for (String token : query._tokens) {
 			try {
-				doc = next(query._tokens.get(i), docid);
-			} catch (IOException ie) {
-				System.err.println(ie.getMessage());
-			} catch (ClassNotFoundException ce) {
-				System.err.println(ce.getMessage());
-			}
-			if (doc != -1)
-				docs.add(doc);
+			    if(token.contains(" "))  // Phrase
+			        nextDocId = nextPhrase(token, curDocId);
+			    else // Word
+			        nextDocId = next(token, curDocId);
+			} catch (Exception e) {
+				System.err.println(e.getMessage());
+			} 
+			if (nextDocId == -1)   return null;   
+			_nextDocIds.add(nextDocId);
 		}
-
-		// no more document
-		if (docs.size() < query._tokens.size())
-			return null;
-
 		// found!
-		if (equal(docs))
-			return _documents.get(docs.get(0));
+		if (equal(_nextDocIds))  return _documents.get(_nextDocIds.get(0));
 
 		// search next
-		return nextDoc(query, Max(docs) - 1);
+		return nextDoc(query, Max(_nextDocIds) - 1);
 	}
 
 	protected Vector<Integer> retriveDocList(String word) throws IOException,
 			ClassNotFoundException {
+	    if(!_dictionary.containsKey(word))
+	        return new Vector<Integer>();
+	    
 		int idx = _dictionary.get(word);
 		HashMap<Integer, ArrayList<Integer>> docMap = getDocMap(idx);
 		Vector<Integer> docList = new Vector<Integer>();
@@ -383,63 +364,69 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		}
 	}
 
-	/* 
-	 * Get Indexer for phrase           
-	 */
-    HashMap<Integer, ArrayList<Integer>> getPhraseIndex(String phrase){
+	/** 
+	 * Get Indexer for phrase
+	 * @param : String phrase
+	 * @return : HashMap<Integer, ArrayList<Integer>> docMap           
+	 **/
+    HashMap<Integer, ArrayList<Integer>> getPhraseDocMap(String phrase){
+        
+        // If it is already existed in the _phraseDocMap, return this.
+        if(_phraseDocMap.containsKey(phrase))
+            return _phraseDocMap.get(phrase);
+            
         Scanner scan = new Scanner(phrase);
-        HashMap<Integer, ArrayList<Integer>> docMap = new HashMap<Integer, ArrayList<Integer>>();
+        HashMap<Integer, ArrayList<Integer>> baseDocMap = new HashMap<Integer, ArrayList<Integer>>();
         int termDistance = 0;
         
         while(scan.hasNext()){
             String word = scan.next();
-            if(!_dictionary.containsKey(word))     return docMap;
+            if(!_dictionary.containsKey(word))  return null;
             int idx = _dictionary.get(word);
             
-            if(docMap.isEmpty())      // If this is first word of phrase
-                    docMap = getDocMap(idx);
-            else{
-                HashMap<Integer, ArrayList<Integer>> curDocList = getDocMap(idx);
-                Set<Integer> docIDSet = docMap.keySet();
+            if(baseDocMap.isEmpty()){      // If this is first word of phrase
+                    baseDocMap = getDocMap(idx);                   
+            }else{
+                HashMap<Integer, ArrayList<Integer>> curDocMap = getDocMap(idx);
+                Set<Integer> baseDocIDSet = baseDocMap.keySet();
+                ArrayList<Integer> baseDocIDlist = new ArrayList<Integer>(baseDocIDSet);
                 
-                for(Integer docID : docIDSet){
-                    if(curDocList.containsKey(docID)){
-                        ArrayList<Integer> firstTermAppear = docMap.get(docID);
-                        ArrayList<Integer> curTermAppear = curDocList.get(docID);
+                for(Integer docID : baseDocIDlist){
+                    if(curDocMap.containsKey(docID)){
+                        ArrayList<Integer> firstTermAppear = baseDocMap.get(docID);
+                        ArrayList<Integer> curTermAppear = curDocMap.get(docID);
                  
                         for(int i=0; i<firstTermAppear.size(); i++){
-                            boolean isFound = false;
                             for(int j=0; j<curTermAppear.size(); j++){
-                                if(firstTermAppear.get(i) + termDistance == curTermAppear.get(j)){
-                                    isFound = true;
+                                if(firstTermAppear.get(i) + termDistance == curTermAppear.get(j))   // found
                                     break;
-                                }
-                            }
-                            if(!isFound){
-                                firstTermAppear.remove(i);
-                                i--;
+                                else if(j == curTermAppear.size()-1)    // Not found
+                                    firstTermAppear.remove(i--);
                             }       
                         }
+                        
+                        if(firstTermAppear.isEmpty())   baseDocMap.remove(docID);                        
                     }else{
-                        docMap.remove(docID);
+                        baseDocMap.remove((Integer)docID);                        
                     }
                 }
             }
             termDistance++;
         }
-        return docMap;
+        _phraseDocMap.put(phrase, baseDocMap);
+        return baseDocMap;
     }
     
-    /*
+    /**
      * Corpus Doc Frequency By Term
-     * param : String term
-     * return : total # of documents with term
-     */
+     * @param : String term
+     * @return : total # of documents with term
+     **/
     @Override
     public int corpusDocFrequencyByTerm(String term) {
         HashMap<Integer, ArrayList<Integer>> docMap = null;
         if(term.contains(" ")){ // Phrase
-            docMap = getPhraseIndex(term);
+            docMap = getPhraseDocMap(term);
             return docMap.size();
         }else{ // Word
             if(!_dictionary.containsKey(term))
@@ -450,17 +437,17 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
         }
     }
 
-    /*
+    /**
      * Corpus Term Frequency
-     * param : String term
-     * return : total # of term appearance in corpus
-     */
+     * @param : String term
+     * @return : total # of term appearance in corpus
+     **/
 	@Override
 	public int corpusTermFrequency(String term) {
 		int count = 0;
 		HashMap<Integer, ArrayList<Integer>> docMap = null; 
 		if(term.contains(" ")){ // Phrase
-		    docMap = getPhraseIndex(term);		    
+		    docMap = getPhraseDocMap(term);		    
 		}else{ // Word
 		    if (!_dictionary.containsKey(term))
 		        return 0;
@@ -474,11 +461,11 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		return count;
 	}
 
-	/*
+	/**
      * Document Term Frequency
-     * param : String term, String url
-     * return : total # of term appearance in a document
-     */
+     * @param : String term, String url
+     * @return : total # of term appearance in a document
+     **/
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		// Get Document ID relating this url
@@ -491,7 +478,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		// Get Document Map
 		HashMap<Integer, ArrayList<Integer>> docMap = null;
 		if(term.contains(" ")){ // Phrase
-            docMap = getPhraseIndex(term);          
+            docMap = getPhraseDocMap(term);          
         }else{ // Word
             if (!_dictionary.containsKey(term))
                 return 0;

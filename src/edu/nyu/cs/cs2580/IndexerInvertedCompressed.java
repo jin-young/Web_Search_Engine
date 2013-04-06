@@ -377,7 +377,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	}
 
 	@Override
-	public int nextPhrase(Query query, int docid, int pos) {
+	public int nextPhrase(String phrase, int docid) {
+	    
+	    return -1;
+	    /*
 		int docidVer = nextDoc(query, docid - 1)._docid;
 		if (docidVer != docid)
 			return -1;
@@ -396,8 +399,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		if (isSuccess)
 			return posList.get(0);
 		return nextPhrase(query, docid, posList.get(1));
+		*/
 	}
-
+	
+/*
 	private int next_pos(String term, int docid, int pos) {
 		try {
 			int wordId = _dictionary.get(term);
@@ -434,7 +439,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 		}
 		return -1;
 	}
-	
+*/	
 	//TEST DONE FROM HERE
 	protected short[] encodeVbyte(int value) {
 		short[] alignedCode;
