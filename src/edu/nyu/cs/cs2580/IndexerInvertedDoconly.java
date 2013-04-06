@@ -172,43 +172,45 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 
 	/**
 	 * In HW2, you should be using {@link DocumentIndexed}
+	 * Not used in Document Only Indexer
 	 */
 	@Override
-	public int nextPhrase(Query query, int docid, int pos) {
-		return 1;
+	public int nextPhrase(String phrase, int docid) {
+		return -1;
 	}
 
 	@Override
-	public Document nextDoc(Query query, int docid) {
+	public Document nextDoc(Query query, int curDocId) {
 
-		Vector<Integer> docs = new Vector<Integer>();
-		int doc = -1;
+	    // If query contains phrase, convert it as conjunctive words.
+	    int tokenSize = query._tokens.size();
+	    for(int i=0; i<tokenSize; i++){
+	        if(query._tokens.get(i).contains(" ")){
+	            Scanner scan = new Scanner(query._tokens.get(i));
+	            while(scan.hasNext())
+	                query._tokens.add( scan.next() );
+	        }
+	    }
+	    
+		Vector<Integer> _nextDocIds = new Vector<Integer>();
+		int nextDocId = -1;
 
 		// find next document for each query
-		for (int i = 0; i < query._tokens.size(); i++) {
+		for (String token : query._tokens) {
 			try {
-				doc = next(query._tokens.get(i), docid);
-			} catch (IOException ie) {
-				System.err.println(ie.getMessage());
-			} catch (ClassNotFoundException ce) {
-				System.err.println(ce.getMessage());
-			}
-			if (doc != -1)
-				docs.add(doc);
-		}
-
-		// no more document
-		if (docs.size() < query._tokens.size()) {
-			return null;
+			    nextDocId = next(token, curDocId);
+			} catch (Exception e) {
+				System.err.println(e.getMessage());
+			} 
+			if (nextDocId == -1)  return null;
+			_nextDocIds.add(nextDocId);
 		}
 
 		// found!
-		if (equal(docs)) {
-			return _documents.get(docs.get(0));
-		}
-
+		if (equal(_nextDocIds))  return _documents.get(_nextDocIds.get(0));
+		
 		// search next
-		return nextDoc(query, Max(docs) - 1);
+		return nextDoc(query, Max(_nextDocIds) - 1);
 	}
 
 	protected Vector<Integer> retriveDocList(String word) throws IOException,
