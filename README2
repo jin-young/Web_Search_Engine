@@ -1,0 +1,25 @@
+1) To run Web Search Server
+
+   * Compire : make
+   * Construct the index : make buildindex
+   * Start the server : ./bin/start_server.sh
+
+2) Test
+   
+   * Send Query : $ curl 'localhost:25804/search?query=<QUERY>&ranker=<RANKER-TYPE>'
+   * please use table as parameter
+     -------------------------------------------------------------
+	QUERY		|  single query : web
+			|  multiple queries : web%20search
+			|  phrase query : %22web%20search%22 
+       	RANKER-TYPE	|  {favorite}
+     -------------------------------------------------------------
+
+3) HTML file parsing
+   * We approach two way. 
+     1) Made own Java program to parse.
+     	- Retrive <body> ~ </body> part
+	- Remove html tags, e.g, <script> <li>, so on.
+     2) Use opensource program : Jsoup
+        - Much faster, optimized in parsing on html.
+	- Because of efficiency on our search engine, we select this.

@@ -60,7 +60,7 @@ public class RankerFavorite extends Ranker {
 
     private ScoredDocument scoreDocument(Query query, DocumentIndexed doc) {
         // Process the raw query into tokens.
-        query.processQuery();
+        //query.processQuery();
         double score = calScore(query, doc);
         return new ScoredDocument(doc, score);
     }

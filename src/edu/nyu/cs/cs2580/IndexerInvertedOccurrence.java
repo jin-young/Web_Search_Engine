@@ -368,7 +368,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		int pageNum = idx % MAXCORPUS;
 
 		// Read corpus file
-		String indexFile = _options._indexPrefix + "/index_" + pageNum
+		String indexFile = _options._indexPrefix + "/index_" + String.format("%02d", pageNum)
 				+ ".idx";
 		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(
 				indexFile));

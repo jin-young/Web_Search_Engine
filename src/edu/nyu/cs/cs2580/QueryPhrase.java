@@ -20,10 +20,12 @@ public class QueryPhrase extends Query {
         boolean isPhrase = false;
         for(int i=0; i<_query.length(); i++){
             if (_query.charAt(i) == ' ' && !isPhrase) {
-                _stemmer.setCurrent(word);
-                _stemmer.stem();
-                _tokens.add(_stemmer.getCurrent());
-                word = "";
+                if(!word.isEmpty()){
+                    _stemmer.setCurrent(word);
+                    _stemmer.stem();
+                    _tokens.add(_stemmer.getCurrent());
+                    word = "";
+                }
             }else if(_query.charAt(i) == '\"'){
                 if(isPhrase){
                     _stemmer.setCurrent(word);
