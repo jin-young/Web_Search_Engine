@@ -1,10 +1,11 @@
 package edu.nyu.cs.cs2580;
 
+import static org.easymock.EasyMock.createMock;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.easymock.EasyMock.*;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -108,5 +109,94 @@ public class IndexerInvertedCompressedTest {
 		assertThat(indexer.howManyAppeared(0, shortList), is(1));
 		assertThat(indexer.howManyAppeared(3, shortList), is(4));
 		assertThat(indexer.howManyAppeared(12, shortList), is(130));
+	}
+	
+
+	/*
+     {
+         Brief 1=[1], 
+         2=[2], 
+         Search 3=[3, 29, 21], 
+         engines 4=[4, 29], 
+         5=[5, 38], 
+         6=[6, 40], 
+         7=[7, 31], 
+         8=[8], 
+         9=[9], 
+         10=[10, 12, 7],
+         11=[11], 
+         12=[12], 
+         13=[13], 
+         14=[14, 35], 
+         15=[15], 
+         17=[17, 17], 
+         16=[16], 
+         19=[19], 
+         18=[18, 17], 
+         21=[21], 
+         20=[20, 6], 
+         23=[24], 
+         22=[23], 
+         25=[27], 
+         24=[25], 
+         27=[30], 
+         26=[28], 
+         29=[36], 
+         28=[31, 21], 
+         31=[39], 
+         30=[37], 
+         34=[42], 
+         35=[44], 
+         32=[40], 
+         33=[41], 
+         38=[48], 
+         39=[50], 
+         36=[45, 6], 
+         37=[47]}>
+	 */
+	@Test
+	public void testWordsPositionsInDoc() {
+	    String doc = "Brief Description: Search engines have become a " + 
+	                "core part of our daily lives. In this course, we will " +
+	                "study the foundations of information retrieval and the " +
+	                "technical aspects of modern Web search engines. We will " +
+	                "also explore a few advanced topics that have emerged " + 
+	                "to become highly influential in relation to Web search. ";
+	    
+	    // doc's words' positions are described above current method 
+	    
+	    Map<Integer, ArrayList<Integer>> result = indexer.wordsPositionsInDoc(doc, 1);
+	    
+	    assertThat("Result shouhd have 39 kyes", result.keySet().size(), is(39));
+	    assertThat("Brief shouhd exist only one", result.get(1).size(), is(1));
+	    
+	    assertThat("Search shouhd exist three", result.get(3).size(), is(3));
+	    assertThat("Search's position should be [3, 29, 21]", 
+	                    result.get(3).toArray(new Integer[1]), is(new Integer[]{3, 29, 21} ));
+	    
+	    assertThat("Engine shouhd exist two", result.get(4).size(), is(2));
+        assertThat("Engine's position should be [4, 29]", 
+                        result.get(4).toArray(new Integer[1]), is(new Integer[]{4, 29} ));	    
+        
+        assertThat("Web shouhd exist two", result.get(28).size(), is(2));
+        assertThat("Web's position should be [31, 21]", 
+                        result.get(28).toArray(new Integer[1]), is(new Integer[]{31, 21} ));
+        
+        assertThat("relation shouhd exist one", result.get(39).size(), is(1));
+        assertThat("relation's position should be [50]", 
+                        result.get(39).toArray(new Integer[1]), is(new Integer[]{50} ));
+	}
+	
+	@Test
+	public void testTrimPunctuation() {
+	    String[][] tests = {
+            {"don't", "don't"}, {"do'", "do"}, {"Description:", "Description"},
+            {"engines.", "engines"}, {"(google", "google"}, {"te!(ed","te!(ed"} 
+	    };
+	    
+	    for(String[] test : tests) {
+	        assertThat(test[0] + " should be " + test[1], 
+	                    indexer.trimPunctuation(test[0]), is(test[1]));
+	    }
 	}
 }

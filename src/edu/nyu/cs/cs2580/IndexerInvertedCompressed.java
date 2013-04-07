@@ -45,43 +45,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	// Use Delta Encoding with v-bytes
 	public int makeIndex(String content, int docId) {
 		Scanner s = new Scanner(content); // Uses white space by default.
-		// <id of word, its' position in given doc>
-		Map<Integer, ArrayList<Integer>> currentDocIndex = new HashMap<Integer, ArrayList<Integer>>();
-		// positions of given word id
-		ArrayList<Integer> positionsOfWordInCurrentDoc = null;
-		int position = 1;
 
-		// Build index for current document
-		while (s.hasNext()) {
-			_stemmer.setCurrent(s.next());
-			_stemmer.stem();
-			String token = _stemmer.getCurrent().toLowerCase();
-			int postingId = -1;
-			
-			if (_dictionary.get(token) != null) {
-				postingId = _dictionary.get(token);
-			} else {
-				postingId = _dictionary.size() + 1;
-				_dictionary.put(token, postingId);
-			}
-			
-			if (!_index.containsKey(postingId)) {
-				_index.put(postingId, new ArrayList<Short>());
-			}
+		Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content, docId);
 
-			if (currentDocIndex.containsKey(postingId)) {
-				positionsOfWordInCurrentDoc = currentDocIndex.get(postingId);
-			} else {
-				positionsOfWordInCurrentDoc = new ArrayList<Integer>();
-				currentDocIndex.put(postingId, positionsOfWordInCurrentDoc);
-			}
-
-			positionsOfWordInCurrentDoc.add(position);
-			position++;
-			++_totalTermFrequency;
+		for(int wordId : wordsPositionsInDoc.keySet()) {
+		    
 		}
-		s.close();
-
+		/*
 		for (int wordId : currentDocIndex.keySet()) {
 			positionsOfWordInCurrentDoc = currentDocIndex.get(wordId);
 
@@ -134,10 +104,72 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			_skipPointer.get(wordId).add(docId);
 			_skipPointer.get(wordId).add(postingList.size());
 		}
+		*/
 
-		return (position - 1); // num of tokens in this document
+		//return (position - 1); // num of tokens in this document
+		return 0;
 	}
 	
+    protected Map<Integer, ArrayList<Integer>> wordsPositionsInDoc(String content, int docId) {
+        Scanner s = new Scanner(content); // Uses white space by default.
+        
+        // word id and position of the word in current doc
+        Map<Integer, ArrayList<Integer>> wordsPositions = new HashMap<Integer, ArrayList<Integer>>();
+        Map<Integer, Integer> lastPosition = new HashMap<Integer, Integer>();
+        
+        int position = 1;
+        
+        while (s.hasNext()) {
+            String term = trimPunctuation(s.next());
+            
+            _stemmer.setCurrent(term);
+            _stemmer.stem();
+            String token = _stemmer.getCurrent().toLowerCase();
+            int postingId = -1;
+            
+            if (_dictionary.get(token) != null) {
+                postingId = _dictionary.get(token);
+            } else {
+                postingId = _dictionary.size() + 1;
+                _dictionary.put(token, postingId);
+            }
+            
+            /*
+            if (!_index.containsKey(postingId)) {
+                _index.put(postingId, new ArrayList<Short>());
+            }
+            */
+
+            ArrayList<Integer> positions = null;
+            if (!wordsPositions.containsKey(postingId)) {
+                positions = new ArrayList<Integer>();
+                positions.add(position);
+                wordsPositions.put(postingId, positions);
+            } else {
+                positions = wordsPositions.get(postingId);
+                //apply delta encoding
+                positions.add(position - lastPosition.get(postingId));
+            }
+            //remember last position because of delta encoding
+            lastPosition.put(postingId, position);
+            
+            position++;
+            ++_totalTermFrequency;
+        }
+        s.close();
+        
+        return wordsPositions;
+    }
+
+    protected String trimPunctuation(String term) {
+        //remove puncs in tail
+        term = term.replaceAll("(.+)\\p{Punct}(\\s|$)", "$1$2");
+        //remove puncs in head
+        term = term.replaceAll("^\\p{Punct}(.+)(\\s|$)", "$1$2");
+        
+        return term;
+    }
+
     @Override
     protected void mergePartialIndex(int lastRound) {
         // TODO Auto-generated method stub
@@ -316,56 +348,77 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			return;
 		
 		Integer[] wordIds = _index.keySet().toArray(new Integer[1]);
-		
-		Arrays.sort(wordIds, new Comparator<Integer>() {
-			@Override
-			public int compare(Integer o1, Integer o2) {
-				return Math.abs(o1.intValue() % MAXCORPUS) - Math.abs(o2.intValue() % MAXCORPUS);
-			}
-			
-		});
-		
-		int corpusId = Math.abs(wordIds[0] % MAXCORPUS) + 1;
-		ObjectOutputStream writer = null;
-		
-		String corpusPrefix = _options._indexPrefix + "/index_";
-		String corpusSurfix = ".idx";
-//		Map<Integer, ArrayList<Short>> savedIndex = null;
-		Map<Integer, ArrayList<Short>> tempIndex = null;
-		
-		for(int wordId : wordIds) {
-			if( corpusId != (Math.abs(wordId % MAXCORPUS) + 1) ) {
-				if(! tempIndex.isEmpty() ) {
-					System.out.println("Save partial index " + corpusId);
-					try {
-						writer = createObjOutStream(corpusPrefix + String.format("%02d", corpusId) + corpusSurfix);
-						writer.writeObject(tempIndex);
-						writer.close();
-						writer = null;
-					} catch (Exception e) {
-						e.printStackTrace();
-						throw new RuntimeException("Error during partial index writing");
-					}
-					
-					tempIndex.clear();
-					tempIndex = null;
-				}
-				
-				corpusId = Math.abs(wordId % MAXCORPUS) + 1;
-				System.out.println("Let start corpus " + corpusId);
-			}
-			
-			if(tempIndex == null) {
-				tempIndex = new HashMap<Integer, ArrayList<Short>>();
-			}
-			
-			tempIndex.put(wordId, _index.remove(wordId));
-		}
-		
-		_index.clear();
-	}	
+        
+        Arrays.sort(wordIds, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return Math.abs(o1.intValue() % MAXCORPUS) - Math.abs(o2.intValue() % MAXCORPUS);
+            }
+            
+        });
+        
+        int corpusId = Math.abs(wordIds[0] % MAXCORPUS);
+        ObjectOutputStream writer = null;
+        
+        Map<Integer, ArrayList<Short>> tempIndex = null;
+        Map<Integer, ArrayList<Integer>> tempSkipPointer = null;
+        
+        for(int wordId : wordIds) {
+            if( corpusId != (Math.abs(wordId % MAXCORPUS)) ) {
+                if( tempIndex != null && !tempIndex.isEmpty() ) {
+                    System.out.println("Save partial index " + corpusId);
+                    try {
+                        writer = createObjOutStream(getPartialIndexName(corpusId, round));
+                        writer.writeObject(tempIndex);
+                        writer.close();
+                        writer = null;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("Error during partial index writing");
+                    }
+                    
+                    tempIndex.clear();
+                    tempIndex = null;
+                }
+                
+                if( tempSkipPointer != null && !tempSkipPointer.isEmpty() ) {
+                    System.out.println("Save partial skip pointer " + corpusId);
+                    try {
+                        writer = createObjOutStream(getPartialSkipPointerName(corpusId, round));
+                        writer.writeObject(tempIndex);
+                        writer.close();
+                        writer = null;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("Error during partial skip pointer writing");
+                    }
+                    
+                    tempSkipPointer.clear();
+                    tempSkipPointer = null;
+                }
+                
+                corpusId = Math.abs(wordId % MAXCORPUS);
+            }
+            
+            if(tempIndex == null) {
+                tempIndex = new HashMap<Integer, ArrayList<Short>>();
+            }
+            
+            if(tempSkipPointer == null) {
+                tempSkipPointer = new HashMap<Integer, ArrayList<Integer>>();
+            }
+            
+            tempIndex.put(wordId, _index.remove(wordId));
+            tempSkipPointer.put(wordId, _skipPointer.remove(wordId));
+        }
+	}
+    
+    protected String getPartialSkipPointerName(int idx, int round) {
+        String indexPrefix = _options._indexPrefix + "/skip_";
+        return indexPrefix + String.format("%02d", idx) + "_" + round + ".idx";
+    }
 
-	@Override
+    @Override
 	public void writeDicToFile() throws IOException {
 		String dicFile = _options._indexPrefix + "/dictionary.idx";
 		ObjectOutputStream writer = createObjOutStream(dicFile);
