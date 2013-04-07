@@ -20,7 +20,9 @@ public class IndexerInvertedCompressedTest {
 	public void setUp() {
 		Options _options = createMock(SearchEngine.Options.class);
 		_options._indexerType = "inverted-compressed";
-
+		_options._corpusAnalyzerType = "";
+		_options._logMinerType = "";
+		
 		indexer = (IndexerInvertedCompressed) Indexer.Factory
 				.getIndexerByOption(_options);
 		
