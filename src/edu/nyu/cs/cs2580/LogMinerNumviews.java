@@ -1,6 +1,18 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -9,38 +21,71 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class LogMinerNumviews extends LogMiner {
 
-  public LogMinerNumviews(Options options) {
-    super(options);
-  }
+	protected Map<String, Integer> _numview = new HashMap<String, Integer>();
 
-  /**
-   * This function processes the logs within the log directory as specified by
-   * the {@link _options}. The logs are obtained from Wikipedia dumps and have
-   * the following format per line: [language]<space>[article]<space>[#views].
-   * Those view information are to be extracted for documents in our corpus and
-   * stored somewhere to be used during indexing.
-   *
-   * Note that the log contains view information for all articles in Wikipedia
-   * and it is necessary to locate the information about articles within our
-   * corpus.
-   *
-   * @throws IOException
-   */
-  @Override
-  public void compute() throws IOException {
-    System.out.println("Computing using " + this.getClass().getName());
-    return;
-  }
+	public LogMinerNumviews(Options options) {
+		super(options);
+	}
 
-  /**
-   * During indexing mode, this function loads the NumViews values computed
-   * during mining mode to be used by the indexer.
-   * 
-   * @throws IOException
-   */
-  @Override
-  public Object load() throws IOException {
-    System.out.println("Loading using " + this.getClass().getName());
-    return null;
-  }
+	/**
+	 * This function processes the logs within the log directory as specified by
+	 * the {@link _options}. The logs are obtained from Wikipedia dumps and have
+	 * the following format per line: [language]<space>[article]<space>[#views].
+	 * Those view information are to be extracted for documents in our corpus
+	 * and stored somewhere to be used during indexing.
+	 * 
+	 * Note that the log contains view information for all articles in Wikipedia
+	 * and it is necessary to locate the information about articles within our
+	 * corpus.
+	 * 
+	 * @throws IOException
+	 */
+	@Override
+	public void compute() throws IOException {
+		System.out.println("Computing using " + this.getClass().getName());
+
+		String path = _options._logPrefix;
+		// Get All Files list in the Corpus Folder (data/wiki)
+		File folder = new File(_options._corpusPrefix);
+		File[] listOfFiles = folder.listFiles();
+
+		for (File file : listOfFiles) {
+			if (file.isFile()) {
+				_numview.put(file.getName(), 0);
+			}
+		}
+		
+		BufferedReader read = new BufferedReader(new FileReader(path));
+		String line;
+
+		while ((line = read.readLine()) != null) {
+		   String[] lineSplit = line.split(" ");
+		   if(lineSplit.length == 3){
+			   try{
+			   String temp = URLDecoder.decode(lineSplit[1], "UTF-8");
+			   if(_numview.containsKey(temp))
+			   _numview.put(temp, _numview.get(temp)+Integer.parseInt(lineSplit[2]));
+			   } catch(IllegalArgumentException e){
+
+			   }
+		   }
+		}
+		read.close();
+		
+
+		return;
+	}
+
+	/**
+	 * During indexing mode, this function loads the NumViews values computed
+	 * during mining mode to be used by the indexer.
+	 * 
+	 * @throws IOException
+	 */
+	@Override
+	public Object load() throws IOException {
+		System.out.println("Loading using " + this.getClass().getName());
+		return null;
+	}
+
 }
