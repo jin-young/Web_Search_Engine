@@ -6,11 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
-
 /**
  * @CS2580: Implement this class for HW3.
  */
@@ -55,100 +53,11 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         }
         System.out.println("L F D");
 
-        Map<Integer, Map<Integer, Integer>> matrix = buildMatrix(corpus);
+        MapMatrix matrix = buildMatrix(corpus);
 
         return;
     }
     
-    //Actually, below algorithm looks like showing performance O(n^3) if worst case is given.
-    //However, it does not happen in real world because each document contains not much number of links.
-    protected Map<Integer, Map<Integer, Integer>> matrixMulti(Map<Integer, Map<Integer, Integer>> org) {
-        Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
-        
-        for(Integer docId : org.keySet()) {
-            if(org.containsKey(docId)) {
-                for(Integer key1 : org.get(docId).keySet()) {
-                    if(org.containsKey(key1)) {
-                        for(Integer key2 : org.get(key1).keySet()) {
-                            int val = org.get(docId).get(key1) * org.get(key1).get(key2);
-                            if(result.containsKey(docId)) {
-                                Map<Integer, Integer> inner = result.get(docId);
-                                
-                                if(inner.containsKey(key2)) {
-                                    inner.put(key2, inner.get(key2) + val);
-                                } else {
-                                    inner.put(key2, val);
-                                }
-                                
-                            } else {
-                                Map<Integer, Integer> inner = new HashMap<Integer, Integer>();
-                                inner.put(key2, val);
-                                result.put(docId, inner);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return result;
-    }
-
-    protected String[] getAchors(String fileName) {
-        File f = new File(_options._corpusPrefix + "/" + fileName);
-        org.jsoup.nodes.Element body;
-        try {
-            body = Jsoup.parse(f, "UTF-8", _options._corpusPrefix + "/" + fileName).body();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during anchor gathering");
-        }
-
-        Elements elems = body.select("a");
-        String[] result = new String[elems.size()];
-        for(int i=0; i<elems.size(); i++) {
-            result[i] = elems.get(i).attr("href");
-        }
-
-        return result;
-    }
-
-    protected Map<Integer, Map<Integer, Integer>> buildMatrix(Map<String, Document> corpus) throws IOException {
-        System.out.println("G M");
-        Map<Integer, Map<Integer, Integer>> matrix = new HashMap<Integer, Map<Integer, Integer>>();
-        System.out.println("G M D");
-
-        int count = 1;
-        for (String fName : corpus.keySet()) {
-            if (count % 1000 == 0)
-                System.out.println(count + " have been processed");
-
-            Document currentDoc = corpus.get(fName);
-            
-            for (String href : getAchors(fName)) {
-                if (corpus.containsKey(href)) {
-                    Map<Integer, Integer> rows = null;
-                    Document targetDoc = corpus.get(href);
-                    if (matrix.containsKey(currentDoc._docid)) {
-                        rows = matrix.get(currentDoc._docid);
-                    } else {
-                        rows = new HashMap<Integer, Integer>();
-                        matrix.put(currentDoc._docid, rows);
-                    }
-
-                    if (rows.containsKey(targetDoc._docid)) {
-                        rows.put(targetDoc._docid, rows.get(targetDoc._docid) + 1);
-                    } else {
-                        rows.put(targetDoc._docid, 1);
-                    }
-                }
-            }
-
-            count++;
-        }
-        return matrix;
-    }
-
     /**
      * This function computes the PageRank based on the internal graph generated
      * by the {@link prepare} function, and stores the PageRank to be used for
@@ -178,5 +87,106 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     public Object load() throws IOException {
         System.out.println("Loading using " + this.getClass().getName());
         return null;
+    }
+
+    protected String[] getAchors(String fileName) {
+        File f = new File(_options._corpusPrefix + "/" + fileName);
+        org.jsoup.nodes.Element body;
+        try {
+            body = Jsoup.parse(f, "UTF-8", _options._corpusPrefix + "/" + fileName).body();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during anchor gathering");
+        }
+
+        Elements elems = body.select("a");
+        String[] result = new String[elems.size()];
+        for(int i=0; i<elems.size(); i++) {
+            result[i] = elems.get(i).attr("href");
+        }
+
+        return result;
+    }
+
+    protected MapMatrix buildMatrix(Map<String, Document> corpus) throws IOException {
+        System.out.println("G M");
+        MapMatrix matrix = new MapMatrix();
+        System.out.println("G M D");
+
+        int count = 1;
+        for (String fName : corpus.keySet()) {
+            if (count % 1000 == 0)
+                System.out.println(count + " have been processed");
+
+            Document currentDoc = corpus.get(fName);
+            
+            for (String href : getAchors(fName)) {
+                if (corpus.containsKey(href)) {
+                    Map<Integer, Float> rows = null;
+                    Document targetDoc = corpus.get(href);
+                    if (matrix.containsKey(currentDoc._docid)) {
+                        rows = matrix.get(currentDoc._docid);
+                    } else {
+                        rows = new HashMap<Integer, Float>();
+                        matrix.put(currentDoc._docid, rows);
+                    }
+
+                    if (rows.containsKey(targetDoc._docid)) {
+                        rows.put(targetDoc._docid, rows.get(targetDoc._docid) + 1.0f);
+                    } else {
+                        rows.put(targetDoc._docid, 1.0f);
+                    }
+                }
+            }
+
+            count++;
+        }
+        return matrix;
+    }
+    
+    //Actually, below algorithm looks like having performance O(n^3) if worst case is given.
+    //However, it does not happen in real world because each document contains not much number of links.
+    protected MapMatrix matrixMulti(MapMatrix m1, MapMatrix m2) {
+        MapMatrix result = new MapMatrix();
+        
+        for(Integer docId : m1.keySet()) {
+            for(Integer key1 : m1.get(docId).keySet()) {
+                if( m2.containsKey(key1)) {
+                    for(Integer key2 : m2.get(key1).keySet()) {
+                        float val = m1.get(docId).get(key1) * m2.get(key1).get(key2);
+                        if(result.containsKey(docId)) {
+                            Map<Integer, Float> inner = result.get(docId);
+                            
+                            if(inner.containsKey(key2)) {
+                                inner.put(key2, inner.get(key2) + val);
+                            } else {
+                                inner.put(key2, val);
+                            }
+                            
+                        } else {
+                            Map<Integer, Float> inner = new HashMap<Integer, Float>();
+                            inner.put(key2, val);
+                            result.put(docId, inner);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return result;
+    }    
+    
+    public MapMatrix matrixTimesScala(float v, MapMatrix m1) {
+        MapMatrix result = new MapMatrix();
+        
+        for(Integer docId : m1.keySet()) {
+            Map<Integer, Float> inner = new HashMap<Integer, Float>();
+            result.put(docId, inner);
+            for(Integer key1 : m1.get(docId).keySet()) {
+                inner.put(key1, m1.get(docId).get(key1) * v);
+            }
+        }
+            
+        return result;
     }
 }

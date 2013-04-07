@@ -43,13 +43,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	}
 
 	// Use Delta Encoding with v-bytes
-
 	public int makeIndex(String content, int docId) {
 		Scanner s = new Scanner(content); // Uses white space by default.
 		// <id of word, its' position in given doc>
-		Map<Integer, Vector<Integer>> currentDocIndex = new HashMap<Integer, Vector<Integer>>();
+		Map<Integer, ArrayList<Integer>> currentDocIndex = new HashMap<Integer, ArrayList<Integer>>();
 		// positions of given word id
-		Vector<Integer> positionsOfWordInCurrentDoc = null;
+		ArrayList<Integer> positionsOfWordInCurrentDoc = null;
 		int position = 1;
 
 		// Build index for current document
@@ -57,17 +56,15 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			_stemmer.setCurrent(s.next());
 			_stemmer.stem();
 			String token = _stemmer.getCurrent().toLowerCase();
-			int postingId = token.hashCode();
-			/*
+			int postingId = -1;
+			
 			if (_dictionary.get(token) != null) {
 				postingId = _dictionary.get(token);
-				_sessionDictionary.put(token, postingId);
 			} else {
 				postingId = _dictionary.size() + 1;
 				_dictionary.put(token, postingId);
-				_sessionDictionary.put(token, postingId);
 			}
-			*/
+			
 			if (!_index.containsKey(postingId)) {
 				_index.put(postingId, new ArrayList<Short>());
 			}
@@ -75,7 +72,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 			if (currentDocIndex.containsKey(postingId)) {
 				positionsOfWordInCurrentDoc = currentDocIndex.get(postingId);
 			} else {
-				positionsOfWordInCurrentDoc = new Vector<Integer>();
+				positionsOfWordInCurrentDoc = new ArrayList<Integer>();
 				currentDocIndex.put(postingId, positionsOfWordInCurrentDoc);
 			}
 
@@ -140,6 +137,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 
 		return (position - 1); // num of tokens in this document
 	}
+	
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+        // TODO Auto-generated method stub
+        
+    }
 
 	@Override
 	public Document getDoc(int docid) {
@@ -501,10 +504,4 @@ public class IndexerInvertedCompressed extends IndexerCommon implements
 	protected int howManyAppeared(int positionOfDocId, ArrayList<Short> docMap) {
 		return decodeVbyte(nextPosition(positionOfDocId, docMap), docMap);
 	}
-
-    @Override
-    protected void mergePartialIndex(int lastRound) {
-        // TODO Auto-generated method stub
-        
-    }
 }
