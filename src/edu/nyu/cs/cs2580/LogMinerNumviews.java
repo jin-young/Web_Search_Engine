@@ -2,8 +2,12 @@ package edu.nyu.cs.cs2580;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,6 +105,12 @@ public class LogMinerNumviews extends LogMiner {
 		}
 		read.close();
 		
+		String dicFile = "data/numview.idx";
+		ObjectOutputStream writer = new ObjectOutputStream(
+				new FileOutputStream(dicFile));
+		writer.writeObject(_numview);
+		writer.close();
+		
 		return;
 	}
 
@@ -113,7 +123,17 @@ public class LogMinerNumviews extends LogMiner {
 	@Override
 	public Object load() throws IOException {
 		System.out.println("Loading using " + this.getClass().getName());
-		return _numview;
+		 FileInputStream fis = new FileInputStream("data/numview.idx");
+	        ObjectInputStream reader = new ObjectInputStream(fis);
+	        Map<String, Integer> new_numview=null;
+			try {
+				new_numview = (Map<String, Integer>) reader.readObject();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        reader.close();
+		return new_numview;
 	}
 
 }
