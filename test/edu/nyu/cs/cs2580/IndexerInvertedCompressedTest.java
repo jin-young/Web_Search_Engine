@@ -265,12 +265,18 @@ public class IndexerInvertedCompressedTest {
     public void testGetPartialIndexName() {
         assertThat(indexer.getPartialIndexName(1, 2), is(_options._indexPrefix + "/index_01_2.idx"));
         assertThat(indexer.getPartialIndexName(29, 1), is(_options._indexPrefix + "/index_29_1.idx"));
+        
+        assertThat(indexer.getPartialIndexName(11), is(_options._indexPrefix + "/index_11.idx"));
+        assertThat(indexer.getPartialIndexName(3), is(_options._indexPrefix + "/index_03.idx"));
     }
     
     @Test
     public void testGetPartialSkipPointerName() {
         assertThat(indexer.getPartialSkipPointerName(1, 2), is(_options._indexPrefix + "/skip_01_2.idx"));
         assertThat(indexer.getPartialSkipPointerName(29, 1), is(_options._indexPrefix + "/skip_29_1.idx"));
+        
+        assertThat(indexer.getPartialSkipPointerName(15), is(_options._indexPrefix + "/skip_15.idx"));
+        assertThat(indexer.getPartialSkipPointerName(7), is(_options._indexPrefix + "/skip_07.idx"));
     }
     
     @Test
@@ -376,6 +382,96 @@ public class IndexerInvertedCompressedTest {
         deleteDirectory(testDir);
     }  
     
+    @Test
+    public void testAdjustPostingHeader() {
+        //adjustPostingHeader(ArrayList<Short> posting, ArrayList<Integer> prevSkipInfo)
+        //same encoded length case
+        ArrayList<Integer> pSkipInfo = new ArrayList<Integer>();
+        //(1, 4) (2, 7) (10, 10)
+        pSkipInfo.add(1); pSkipInfo.add(4);
+        pSkipInfo.add(2); pSkipInfo.add(7);
+        pSkipInfo.add(10); pSkipInfo.add(10);
+        
+        //above means that previous posting might be 
+        //  (1, 2, [?, ?]), (1, 1, [?]), (8, 1, [?]).
+        //there are three doc ids: 1, 2, 10
+        //note: currently we don't care actual value of ?
+        
+        //let second posting be (15, 2, [3, 17]), (2, 1, [5]).
+        //there are two doc ids: 15, 17.
+        
+        ArrayList<Short> posting = new ArrayList<Short>();
+        for(int v : new int[] {15, 2, 3, 17, 2, 1, 5}) {
+            for(short s : ByteAlignUtil.encodeVbyte(v)) {
+                posting.add(s);
+            }
+        }
+        
+        int[] expectedV = new int[] {5, 2, 3, 17, 2, 1, 5};
+        ArrayList<Short> expected = new ArrayList<Short>();
+        for(int v : expectedV) {
+            for(short s : ByteAlignUtil.encodeVbyte(v)) {
+                expected.add(s);
+            }
+        }
+        
+        ArrayList<Short> result = indexer.adjustPostingHeader(posting, pSkipInfo);
+        assertThat("head should be 5 instead of 15 because of delta encoding", result, is(expected));
+        
+        int idx = 1;
+        for(int i=1; i<result.size(); ) {
+            assertThat("Everyelse sholud be same at " + idx, 
+                    ByteAlignUtil.decodeVbyte(i, result), is(expectedV[idx++]));
+            i = ByteAlignUtil.nextPosition(i, result);
+        }
+        //suppose last doc id of previous skip pointer is 
+        pSkipInfo.add(10000); pSkipInfo.add(15);
+        
+        //we have new posting which will be added and have doc id 10004 and 10006
+        posting.clear();
+        for(int v : new int[] {10004, 2, 3, 17, 2, 1, 5}) {
+            for(short s : ByteAlignUtil.encodeVbyte(v)) {
+                posting.add(s);
+            }
+        }
+        expectedV = new int[] {4, 2, 3, 17, 2, 1, 5};
+        expected.clear();
+        for(int v : expectedV) {
+            for(short s : ByteAlignUtil.encodeVbyte(v)) {
+                expected.add(s);
+            }
+        }
+        
+        result = indexer.adjustPostingHeader(posting, pSkipInfo);
+        assertThat("head should be 4 instead of 10004 because of delta encoding", result, is(expected));
+        
+        idx = 1;
+        for(int i=1; i<result.size(); ) {
+            assertThat("Everyelse sholud be same at " + idx, 
+                    ByteAlignUtil.decodeVbyte(i, result), is(expectedV[idx++]));
+            i = ByteAlignUtil.nextPosition(i, result);
+        }
+    }
+    
+    @Test
+    public void testAdjustSkipInfo() {
+        ArrayList<Integer> skipInfo = new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{5, 4, 2, 7, 10, 10})
+        );
+        
+        //suppose that after adjusting head of corresponded posting, head bytes reduced as -1
+        indexer.adjustSkipInfo(skipInfo, -1);
+        assertThat("All position should be reduced by -1", skipInfo,
+                is(new ArrayList<Integer>(Arrays.asList(new Integer[]{5, 3, 2, 6, 10, 9}))
+        ));
+        
+        //suppose that after adjusting head of corresponded posting, head bytes increased as 5
+        indexer.adjustSkipInfo(skipInfo, 5);
+        assertThat("All position should be reduced by -1", skipInfo,
+                is(new ArrayList<Integer>(Arrays.asList(new Integer[]{5, 8, 2, 11, 10, 14}))
+        ));
+    }
+    
     private boolean deleteDirectory(File directory) {
         if(directory.exists()){
             File[] files = directory.listFiles();
@@ -394,3 +490,4 @@ public class IndexerInvertedCompressedTest {
     }
 
 }
+

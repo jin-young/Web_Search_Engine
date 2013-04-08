@@ -95,48 +95,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
     }
     
-    protected ArrayList<Short> adjustPostingHeader(ArrayList<Short> posting, ArrayList<Integer> prevSkipInfo) {
-        int lastDocId = lastDocId(prevSkipInfo);
-        int headDocId = ByteAlignUtil.decodeVbyte(0, posting);
-        int deltaId = headDocId - lastDocId;
-        
-        short[] encodedDeltaId = ByteAlignUtil.encodeVbyte(deltaId);
-        short[] endcodedHeadDocId = ByteAlignUtil.encodeVbyte(headDocId);
-        
-        for(int i=0; i<endcodedHeadDocId.length; i++) {
-            posting.remove(i);
-        }
-        
-        ArrayList<Short> header = new ArrayList<Short>();
-        for(short v : encodedDeltaId)
-            header.add(v);
-        
-        header.addAll(posting);
-        
-        return header;
-    }
-
-    protected int lastDocId(ArrayList<Integer> prevSkipInfo) {
-        if(prevSkipInfo == null || prevSkipInfo.isEmpty())
-            return 0;
-        else {
-            return prevSkipInfo.get(prevSkipInfo.size() - 2);
-        }
-    }
-
-    protected void adjustSkipInfo(ArrayList<Integer> skipInfo, int changedLength) {
-        for(int i=0; i<skipInfo.size(); i++) {
-            if(i % 2 == 1) {
-                skipInfo.set(i, skipInfo.get(i) + changedLength);
-            }
-        }
-    }
-
-    protected String getPartialSkipPointerName(int idx) {
-        String indexPrefix = _options._indexPrefix + "/skip_";
-        return indexPrefix + String.format("%02d", idx) + ".idx";
-    }
-    
     protected void writeFinalSkipPointer(int idx, Object target) {
         //write final skip pointer
         ObjectOutputStream writer = null;
@@ -165,38 +123,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
     }    
     
-    protected CompressedIndex loadIndex(int indexId, int round) {
-        ObjectInputStream reader = 
-                createObjInStream(getPartialIndexName(indexId, round));
-        CompressedIndex index = null;
-        
-        try {
-            index = (CompressedIndex)reader.readObject();
-            reader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during load partial index");
-        }
-        
-        return index;
-    }
-    
-    protected SkipPointer loadSkipPointer(int indexId, int round) {
-        ObjectInputStream reader = 
-                createObjInStream(getPartialSkipPointerName(indexId, round));
-        SkipPointer skip = null;
-        
-        try {
-            skip = (SkipPointer)reader.readObject();
-            reader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during load partial index");
-        }
-        
-        return skip;
-    }  
-
     @Override
     public Document getDoc(int docid) {
         return _documents.get(docid);
@@ -267,7 +193,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             return new ArrayList<Short>();
         else {
             ArrayList<Short> docMap = _tmpIndex.get(idx);
-            _index.put(idx, docMap);
+            _index.put(idx, docMap);        
             return docMap;
         }
     }
@@ -396,6 +322,75 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     /////////////////////////////////////////////////////////////////////////////////////////
     // //////////////// TEST DONE OR NOT NEED TO BE TESTED //////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////
+    
+    protected int lastDocId(ArrayList<Integer> prevSkipInfo) {
+        if(prevSkipInfo == null || prevSkipInfo.isEmpty())
+            return 0;
+        else {
+            return prevSkipInfo.get(prevSkipInfo.size() - 2);
+        }
+    }
+
+    protected void adjustSkipInfo(ArrayList<Integer> skipInfo, int changedLength) {
+        for(int i=0; i<skipInfo.size(); i++) {
+            if(i % 2 == 1) {
+                skipInfo.set(i, skipInfo.get(i) + changedLength);
+            }
+        }
+    }
+    
+    protected ArrayList<Short> adjustPostingHeader(ArrayList<Short> posting, ArrayList<Integer> prevSkipInfo) {
+        int lastDocId = lastDocId(prevSkipInfo);
+        int headDocId = ByteAlignUtil.decodeVbyte(0, posting);
+        int deltaId = headDocId - lastDocId;
+        
+        short[] encodedDeltaId = ByteAlignUtil.encodeVbyte(deltaId);
+        short[] endcodedHeadDocId = ByteAlignUtil.encodeVbyte(headDocId);
+        
+        for(int i=0; i<endcodedHeadDocId.length; i++) {
+            posting.remove(0);
+        }
+        
+        ArrayList<Short> header = new ArrayList<Short>();
+        for(short v : encodedDeltaId)
+            header.add(v);
+        
+        header.addAll(posting);
+        
+        return header;
+    }
+    
+    protected CompressedIndex loadIndex(int indexId, int round) {
+        ObjectInputStream reader = 
+                createObjInStream(getPartialIndexName(indexId, round));
+        CompressedIndex index = null;
+        
+        try {
+            index = (CompressedIndex)reader.readObject();
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during load partial index");
+        }
+        
+        return index;
+    }
+    
+    protected SkipPointer loadSkipPointer(int indexId, int round) {
+        ObjectInputStream reader = 
+                createObjInStream(getPartialSkipPointerName(indexId, round));
+        SkipPointer skip = null;
+        
+        try {
+            skip = (SkipPointer)reader.readObject();
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during load partial index");
+        }
+        
+        return skip;
+    }      
     
     public int makeIndex(String content, int docId) {
         Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content);
@@ -598,6 +593,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         String indexPrefix = _options._indexPrefix + "/skip_";
         return indexPrefix + String.format("%02d", idx) + "_" + round + ".idx";
     }
+    
+    protected String getPartialSkipPointerName(int idx) {
+        String indexPrefix = _options._indexPrefix + "/skip_";
+        return indexPrefix + String.format("%02d", idx) + ".idx";
+    }    
     
     public SkipPointer getSkipPointer() {
         return _skipPointer;
