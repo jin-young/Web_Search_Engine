@@ -2,11 +2,16 @@ package edu.nyu.cs.cs2580;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import org.jsoup.Jsoup;
@@ -21,7 +26,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class LogMinerNumviews extends LogMiner {
 
-	static Map<String, Integer> _numview = new HashMap<String, Integer>();
+	static Map<String, Integer> _numview = new TreeMap<String, Integer>();
 
 	public LogMinerNumviews(Options options) {
 		super(options);
@@ -101,6 +106,12 @@ public class LogMinerNumviews extends LogMiner {
 		}
 		read.close();
 		
+		String dicFile = "data/numview.idx";
+		ObjectOutputStream writer = new ObjectOutputStream(
+				new FileOutputStream(dicFile));
+		writer.writeObject(_numview);
+		writer.close();
+		
 		return;
 	}
 
@@ -113,7 +124,17 @@ public class LogMinerNumviews extends LogMiner {
 	@Override
 	public Object load() throws IOException {
 		System.out.println("Loading using " + this.getClass().getName());
-		return _numview;
+		 FileInputStream fis = new FileInputStream("data/numview.idx");
+	        ObjectInputStream reader = new ObjectInputStream(fis);
+	        Map<String, Integer> new_numview=null;
+			try {
+				new_numview = (Map<String, Integer>) reader.readObject();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        reader.close();
+		return new_numview;
 	}
 
 }
