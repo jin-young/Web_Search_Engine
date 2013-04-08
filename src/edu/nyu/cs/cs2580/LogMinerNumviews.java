@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import org.jsoup.Jsoup;
@@ -25,7 +26,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class LogMinerNumviews extends LogMiner {
 
-	static Map<String, Integer> _numview = new HashMap<String, Integer>();
+	static Map<String, Integer> _numview = new TreeMap<String, Integer>();
 
 	public LogMinerNumviews(Options options) {
 		super(options);
