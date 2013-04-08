@@ -40,7 +40,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         _index = new CompressedIndex();
         _skipPointer = new SkipPointer();
         
-        DIV = 100;
+        DIV = 1000;
 
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
@@ -274,21 +274,27 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
-        String dicFile = _options._indexPrefix + "/dictionary.idx";
-        ObjectInputStream reader = new ObjectInputStream(new FileInputStream(dicFile));
+        ObjectInputStream reader = createObjInStream(getIndexerFileName("/dictionary.idx"));
         IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
-        System.out.println("Load dictionary from: " + dicFile);
+        
+        if(!underTest)
+            System.out.println("Load Indexer from: " + getIndexerFileName("/dictionary.idx"));
 
         this._documents = loaded.t_documents;
         this._dictionary = loaded.t_dictionary;
         this._numDocs = loaded.t_numDocs;
         this._totalTermFrequency = loaded.t_totalTermFrequency;
-        this._skipPointer = loaded._skipPointer;
 
         reader.close();
 
-        System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
+        if(!underTest) {
+            System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
                 + Long.toString(_totalTermFrequency) + " terms!");
+        }
+    }
+    
+    protected String getIndexerFileName(String name) {
+        return _options._indexPrefix + name;
     }
 
     @Override
@@ -355,16 +361,17 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     }
 
     @Override
-    public void writeDicToFile() throws IOException {
+    public void writeIndexerToFile() throws IOException {
         String dicFile = _options._indexPrefix + "/dictionary.idx";
         ObjectOutputStream writer = createObjOutStream(dicFile);
+        
         // back-up variables from Indexer class
-        // t_documents = _documents;
-        // t_dictionary = _dictionary;
+        t_documents = _documents;
+        t_dictionary = _dictionary;
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
 
-        writer.writeObject(_dictionary);
+        writer.writeObject(this);
         writer.close();
     }
 
@@ -385,36 +392,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
          * posList.get(0); return nextPhrase(query, docid, posList.get(1));
          */
     }
-
-    /*
-     * private int next_pos(String term, int docid, int pos) { try { int wordId
-     * = _dictionary.get(term); ArrayList<Short> posting = getDocArray(wordId);
-     * 
-     * ArrayList<Integer> skipInfo = _skipPointer.get(wordId); int i = 0; for (;
-     * i < skipInfo.size(); i = i + 2) { if (skipInfo.get(i) == docid) { break;
-     * } }
-     * 
-     * if (i > skipInfo.size()) return -1; // we could not find given doc
-     * 
-     * int howManyOccured = howManyAppeared(i,posting);
-     * 
-     * ArrayList<Integer> posList = new ArrayList<Integer>(); int positionOfHead
-     * = nextPosition(nextPosition(i, posting), posting); for (int j = 0; j <
-     * howManyOccured; j++) { posList.add(decodeVbyte(positionOfHead, posting));
-     * positionOfHead = nextPosition(positionOfHead, posting); }
-     * 
-     * for (i = 0; i < posList.size(); i++) { if (posList.get(i) > pos) return
-     * posList.get(i); } } catch (IOException ie) {
-     * System.err.println(ie.getMessage()); } catch (ClassNotFoundException ce)
-     * { System.err.println(ce.getMessage()); } return -1; }
-     */
     
     /////////////////////////////////////////////////////////////////////////////////////////
     // //////////////// TEST DONE OR NOT NEED TO BE TESTED //////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////
     
     public int makeIndex(String content, int docId) {
-        SkipPointer wordsPositionsInDoc = wordsPositionsInDoc(content);
+        Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content);
 
         for (int wordId : wordsPositionsInDoc.keySet()) {
             initIndex(wordId);
@@ -556,11 +540,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             return skipInfo.get(skipInfo.size() - 2);
     }
 
-    protected SkipPointer wordsPositionsInDoc(String content) {
+    protected Map<Integer, ArrayList<Integer>> wordsPositionsInDoc(String content) {
         Scanner s = new Scanner(content); // Uses white space by default.
 
         // word id and position of the word in current doc
-        SkipPointer wordsPositions = new SkipPointer();
+        Map<Integer, ArrayList<Integer>> wordsPositions = new HashMap<Integer, ArrayList<Integer>>();
         Map<Integer, Integer> lastPosition = new HashMap<Integer, Integer>();
 
         int position = 1;

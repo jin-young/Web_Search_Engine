@@ -8,6 +8,7 @@ import static org.junit.Assert.assertThat;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -105,7 +106,7 @@ public class IndexerInvertedCompressedTest {
 	                "also explore a few advanced topics that have emerged " + 
 	                "to become highly influential in relation to Web search. ";*/
 	    
-	    SkipPointer result = indexer.wordsPositionsInDoc(doc1 + doc2 + doc10);
+	    Map<Integer, ArrayList<Integer>> result = indexer.wordsPositionsInDoc(doc1 + doc2 + doc10);
 	    
 	    assertThat("Result shouhd have 39 kyes", result.keySet().size(), is(39));
 	    assertThat("Brief shouhd appear only one time", result.get(1).size(), is(1));

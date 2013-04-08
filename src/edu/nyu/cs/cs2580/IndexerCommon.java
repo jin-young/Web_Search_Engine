@@ -74,7 +74,7 @@ public abstract class IndexerCommon extends Indexer {
 		
 		mergePartialIndex(lastRound);
 		
-		writeDicToFile();
+		writeIndexerToFile();
 	}
 	
 	protected String getPartialIndexName(int idx, int round) {
@@ -143,9 +143,9 @@ public abstract class IndexerCommon extends Indexer {
 	public abstract void writeToFile(int round);
 
 	/**
-	 * After making index files, save _dictionary into file
+	 * After making index files, save _dictionary and other data into file
 	 **/
-	public abstract void writeDicToFile() throws IOException;
+	public abstract void writeIndexerToFile() throws IOException;
 
 	/**
 	 * Next Phrase position

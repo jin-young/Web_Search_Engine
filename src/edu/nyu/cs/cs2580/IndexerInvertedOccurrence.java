@@ -53,7 +53,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	 * After making index files, save _dictionary into file
 	 **/
 	@Override
-	public void writeDicToFile() throws IOException {
+	public void writeIndexerToFile() throws IOException {
 		String dicFile = _options._indexPrefix + "/dictionary.idx";
 		ObjectOutputStream writer = new ObjectOutputStream(
 				new BufferedOutputStream(new FileOutputStream(dicFile),2048));
