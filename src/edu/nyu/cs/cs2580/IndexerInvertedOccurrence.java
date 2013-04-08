@@ -135,18 +135,18 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		Arrays.sort(idxList, new Comparator<Integer>() {
 			@Override
 			public int compare(Integer o1, Integer o2) {
-				return Math.abs(o1.intValue() % MAXCORPUS) - Math.abs(o2.intValue() % MAXCORPUS);
+				return (o1.intValue() % MAXCORPUS) - (o2.intValue() % MAXCORPUS);
 			}
 			
 		});
 		
-		int corpusId = Math.abs(idxList[0] % MAXCORPUS);
+		int corpusId = idxList[0] % MAXCORPUS;
 		ObjectOutputStream writer = null;
 		
 		Map<Integer, HashMap<Integer, ArrayList<Integer>>> tempIndex = null;
 
 		for(int wId : idxList) {
-			if( corpusId != Math.abs(wId % MAXCORPUS) ) {
+			if( corpusId != (wId % MAXCORPUS) ) {
 				if(! tempIndex.isEmpty() ) {
 					System.out.println("Writing partial index " + corpusId);
 					try {
@@ -163,7 +163,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 					tempIndex = null;
 				}
 				
-				corpusId = Math.abs(wId % MAXCORPUS);
+				corpusId = wId % MAXCORPUS;
 			}
 			
 			if(tempIndex == null) {
@@ -172,6 +172,18 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			
 			tempIndex.put(wId, _index.remove(wId));
 		}
+		
+		//last partial index
+		System.out.println("Writing partial index " + corpusId);
+        try {
+            writer = createObjOutStream(getPartialIndexName(corpusId, round));
+            writer.writeObject(tempIndex);
+            writer.close();
+            writer = null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during partial index writing");
+        }
 		
 		_index.clear();
 	}

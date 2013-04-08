@@ -39,6 +39,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         super(options);
         _index = new CompressedIndex();
         _skipPointer = new SkipPointer();
+        
+        DIV = 100;
 
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
@@ -88,7 +90,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             writeFinalIndex(idx, finalIndex);
             cleaningPartialIndex(idx, lastRound);
             
-            writeFinalIndex(idx, finalSkipPointer);
+            writeFinalSkipPointer(idx, finalSkipPointer);
             cleaningPartialSkipPointer(idx, lastRound);
         }
     }
@@ -441,13 +443,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         CompressedIndex tempIndex = new CompressedIndex();
         SkipPointer tempSkipPointer = new SkipPointer();
 
-        int corpusId = Math.abs(wordIds[0] % MAXCORPUS);
+        int corpusId = wordIds[0] % MAXCORPUS;
         for (int wordId : wordIds) {
-            if (corpusId != (Math.abs(wordId % MAXCORPUS))) {
+            if (corpusId != (wordId % MAXCORPUS)) {
                 flushCurrentIndex(tempIndex, corpusId, round);
                 flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
                 
-                corpusId = Math.abs(wordId % MAXCORPUS);
+                corpusId = wordId % MAXCORPUS;
                 
                 tempIndex = new CompressedIndex();
                 tempSkipPointer = new SkipPointer();
@@ -456,6 +458,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             tempIndex.put(wordId, _index.remove(wordId));
             tempSkipPointer.put(wordId, _skipPointer.remove(wordId));
         }
+        
+        //last partial index and skip pointer
+        flushCurrentIndex(tempIndex, corpusId, round);
+        flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
     }
     
     protected void flushCurrentIndex(CompressedIndex tempIndex, int corpusId, int round) {

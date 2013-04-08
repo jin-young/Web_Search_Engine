@@ -148,6 +148,18 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
             tempIndex.put(wId, _index.remove(wId));
         }
         
+        // last partial index
+        System.out.println("Writing partial index " + corpusId);
+        try {
+            writer = createObjOutStream(getPartialIndexName(corpusId, round));
+            writer.writeObject(tempIndex);
+            writer.close();
+            writer = null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during partial index writing");
+        }
+        
         _index.clear();
 	}
 	
