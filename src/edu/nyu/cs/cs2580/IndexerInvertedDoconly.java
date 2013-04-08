@@ -188,7 +188,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
                 }
             }
             
-            writeFinalINdex(idx, finalIndex);
+            writeFinalIndex(idx, finalIndex);
             cleaningPartialIndex(idx, lastRound);
         }
     }	

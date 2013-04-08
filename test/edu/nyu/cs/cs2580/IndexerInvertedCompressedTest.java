@@ -6,7 +6,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import java.io.File;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -333,8 +332,8 @@ public class IndexerInvertedCompressedTest {
         
         indexer.writeToFile(1);
         
-        CompressedIndex tempIndex = loadIndex(3,1);
-        SkipPointer skip = loadSkipPointer(3, 1);
+        CompressedIndex tempIndex = indexer.loadIndex(3,1);
+        SkipPointer skip = indexer.loadSkipPointer(3, 1);
         
         ArrayList<Short> posting = tempIndex.get(3);
         //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
@@ -360,8 +359,8 @@ public class IndexerInvertedCompressedTest {
         
         assertThat("word id 4 should be stored in 4th index", tempIndex.get(4), nullValue());
         
-        tempIndex = loadIndex(10,1);
-        skip = loadSkipPointer(10, 1);
+        tempIndex = indexer.loadIndex(10,1);
+        skip = indexer.loadSkipPointer(10, 1);
         
         posting = tempIndex.get(10);
         //this posting should be (1, 1, [10]), (1, 2, [9, 7])
@@ -375,25 +374,7 @@ public class IndexerInvertedCompressedTest {
         )));
         
         deleteDirectory(testDir);
-    }
-    
-    private CompressedIndex loadIndex(int indexId, int round) throws Exception {
-        ObjectInputStream reader = 
-                indexer.createObjInStream(indexer.getPartialIndexName(indexId, round));
-        CompressedIndex index = (CompressedIndex)reader.readObject();
-        reader.close();
-        
-        return index;
-    }
-    
-    private SkipPointer loadSkipPointer(int indexId, int round) throws Exception {
-        ObjectInputStream reader = 
-                indexer.createObjInStream(indexer.getPartialSkipPointerName(indexId, round));
-        SkipPointer skip = (SkipPointer)reader.readObject();
-        reader.close();
-        
-        return skip;
-    }    
+    }  
     
     private boolean deleteDirectory(File directory) {
         if(directory.exists()){

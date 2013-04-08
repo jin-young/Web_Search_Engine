@@ -1,13 +1,14 @@
 package edu.nyu.cs.cs2580;
-import java.io.*;
-import java.security.NoSuchAlgorithmException;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.Map;
 
 public class Spearman {
 
 	public static Integer calculate(Map<String, Integer> numvew, Map<String, Integer> pagerank){
 	
-		
+		return 0;
 		
 	}
 

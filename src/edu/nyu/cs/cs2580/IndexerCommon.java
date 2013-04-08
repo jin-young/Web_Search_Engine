@@ -260,7 +260,7 @@ public abstract class IndexerCommon extends Indexer {
         }
 	}
 
-	protected ObjectInputStream createObjInStream(String filePath) 
+	protected static ObjectInputStream createObjInStream(String filePath) 
 	{
 		try {
             return new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath), 1024));
@@ -270,7 +270,7 @@ public abstract class IndexerCommon extends Indexer {
         }
 	}
 	
-   protected void writeFinalINdex(int idx, Object target) {
+   protected void writeFinalIndex(int idx, Object target) {
         //write final index
         ObjectOutputStream writer = null;
         try {
