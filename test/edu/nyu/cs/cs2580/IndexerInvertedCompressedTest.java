@@ -83,6 +83,7 @@ public class IndexerInvertedCompressedTest {
 		
 		indexer = (IndexerInvertedCompressed) Indexer.Factory
 				.getIndexerByOption(_options);
+		indexer.underTest = true;
 		
 		shortList = new ArrayList<Short>(Arrays.asList(new Short[] {
 		    // (2 1 2)
@@ -327,8 +328,6 @@ public class IndexerInvertedCompressedTest {
         indexer.makeIndex(doc1, 1);
         indexer.makeIndex(doc2, 2);
         indexer.makeIndex(doc10, 10);
-        
-        System.out.println(indexer.getIndex());
         
         indexer.writeToFile(1);
         

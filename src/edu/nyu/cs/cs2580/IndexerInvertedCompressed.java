@@ -32,6 +32,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected Map<String, Integer> t_dictionary;
     protected int t_numDocs;
     protected long t_totalTermFrequency;
+    
+    protected boolean underTest = false;
 
     public IndexerInvertedCompressed(Options options) {
         super(options);
@@ -137,7 +139,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         //write final skip pointer
         ObjectOutputStream writer = null;
         try {
-            System.out.println("Writing final skip pointer " + idx);
+            if(!underTest)
+                System.out.println("Writing final skip pointer " + idx);
+            
             writer = createObjOutStream(getPartialSkipPointerName(idx));
             writer.writeObject(target);
             writer.close();
@@ -148,7 +152,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     }
     
     protected void cleaningPartialSkipPointer(int idx, int lastRound) {
-        System.out.println("Cleaning partial skip pointer files");
+        if(!underTest)
+            System.out.println("Cleaning partial skip pointer files");
+        
         for(int round=1; round <= lastRound; round++) {
             File partialIdx = new File(getPartialSkipPointerName(idx, round));
             if(partialIdx.exists()) {
@@ -455,7 +461,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected void flushCurrentIndex(CompressedIndex tempIndex, int corpusId, int round) {
         ObjectOutputStream writer = null;
         if (tempIndex != null && !tempIndex.isEmpty()) {
-            System.out.println("Save partial index " + corpusId);
+            if(!underTest)
+                System.out.println("Save partial index " + corpusId);
+            
             try {
                 writer = createObjOutStream(getPartialIndexName(corpusId, round));
                 writer.writeObject(tempIndex);
@@ -474,7 +482,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected void flushCurrentSkipPointer(SkipPointer sp, int corpusId, int round) {
         ObjectOutputStream writer = null;
         if (sp != null && !sp.isEmpty()) {
-            System.out.println("Save partial skip pointer " + corpusId);
+            if(!underTest)
+                System.out.println("Save partial skip pointer " + corpusId);
+            
             try {
                 writer = createObjOutStream(getPartialSkipPointerName(corpusId, round));
                 writer.writeObject(sp);
