@@ -26,6 +26,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     private CompressedIndex _index;
     private SkipPointer _skipPointer;
+    protected SkipPointer t_skip;
 
     // Back-up variables for serializable file write.
     protected Vector<Document> t_documents;
@@ -34,11 +35,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected long t_totalTermFrequency;
     
     protected boolean underTest = false;
+    protected Map<Integer, Integer> lastProcessedDocId;
 
     public IndexerInvertedCompressed(Options options) {
         super(options);
         _index = new CompressedIndex();
         _skipPointer = new SkipPointer();
+        lastProcessedDocId = new HashMap<Integer, Integer>();
         
         DIV = 1000;
 
@@ -50,37 +53,37 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         
         for(int idx = 0; idx < MAXCORPUS; idx++) {
             CompressedIndex finalIndex = new CompressedIndex();
-            SkipPointer finalSkipPointer = new SkipPointer();
+            //SkipPointer finalSkipPointer = new SkipPointer();
             
             for(int round=1; round <= lastRound; round++) {
                 CompressedIndex currIndex = loadIndex(idx, round);
-                SkipPointer currSkipPointer = loadSkipPointer(idx, round);
+                //SkipPointer currSkipPointer = loadSkipPointer(idx, round);
                 
                 if(finalIndex.isEmpty()) {
                     finalIndex = currIndex;
-                    finalSkipPointer = currSkipPointer;
+                    //finalSkipPointer = currSkipPointer;
                     
                     continue;
                 } else {
                     for(int wordId : currIndex.keySet()) {
                         ArrayList<Short> posting = currIndex.get(wordId);
-                        ArrayList<Integer> skipInfo = currSkipPointer.get(wordId);
+                        //ArrayList<Integer> skipInfo = currSkipPointer.get(wordId);
                         
                         if(!finalIndex.containsKey(wordId)) {
                             finalIndex.put(wordId, posting);
-                            finalSkipPointer.put(wordId, skipInfo);
+                            //finalSkipPointer.put(wordId, skipInfo);
                         } else {
-                            ArrayList<Integer> prevSkipInfo = finalSkipPointer.get(wordId);
+                            //ArrayList<Integer> prevSkipInfo = finalSkipPointer.get(wordId);
                             
                             //because of delta encoding, we need to modify first doc id
                             //in a posting list
-                            ArrayList<Short> adjPosting = adjustPostingHeader(posting, prevSkipInfo);
+                            //ArrayList<Short> adjPosting = adjustPostingHeader(posting, prevSkipInfo);
                             
                             //skip info also should be adjusted
-                            adjustSkipInfo(skipInfo, adjPosting.size() - posting.size());
+                            //adjustSkipInfo(skipInfo, adjPosting.size() - posting.size());
                             
                             finalIndex.get(wordId).addAll(posting);
-                            prevSkipInfo.addAll(skipInfo);
+                            //prevSkipInfo.addAll(skipInfo);
                         }
                     }
                 }
@@ -90,8 +93,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             writeFinalIndex(idx, finalIndex);
             cleaningPartialIndex(idx, lastRound);
             
-            writeFinalSkipPointer(idx, finalSkipPointer);
-            cleaningPartialSkipPointer(idx, lastRound);
+            //writeFinalSkipPointer(idx, finalSkipPointer);
+            //cleaningPartialSkipPointer(idx, lastRound);
         }
     }
     
@@ -296,6 +299,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         t_dictionary = _dictionary;
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
+        t_skip = _skipPointer;
 
         writer.writeObject(this);
         writer.close();
@@ -420,27 +424,27 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         });
 
         CompressedIndex tempIndex = new CompressedIndex();
-        SkipPointer tempSkipPointer = new SkipPointer();
+        //SkipPointer tempSkipPointer = new SkipPointer();
 
         int corpusId = wordIds[0] % MAXCORPUS;
         for (int wordId : wordIds) {
             if (corpusId != (wordId % MAXCORPUS)) {
                 flushCurrentIndex(tempIndex, corpusId, round);
-                flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
+                //flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
                 
                 corpusId = wordId % MAXCORPUS;
                 
                 tempIndex = new CompressedIndex();
-                tempSkipPointer = new SkipPointer();
+                //tempSkipPointer = new SkipPointer();
             }
 
             tempIndex.put(wordId, _index.remove(wordId));
-            tempSkipPointer.put(wordId, _skipPointer.remove(wordId));
+            //tempSkipPointer.put(wordId, _skipPointer.remove(wordId));
         }
         
         //last partial index and skip pointer
         flushCurrentIndex(tempIndex, corpusId, round);
-        flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
+        //flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
     }
     
     protected void flushCurrentIndex(CompressedIndex tempIndex, int corpusId, int round) {
@@ -507,9 +511,17 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     
     protected int addPositionsToIndex(ArrayList<Integer> positions, int docId, int wordId) {
         initIndex(wordId);
-
+          
+        int delta = 0;
+        if(lastProcessedDocId.containsKey(wordId)) {
+           delta = docId - lastProcessedDocId.get(docId);
+        } else {
+           delta = docId;
+	}
+        lastProcessedDocId.put(wordId, docId);
         // delta encoding
-        int offset = ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), docId - lastDocId(wordId));
+        //int offset = ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), docId - lastDocId(wordId));
+        int offset = ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), delta);
         offset += ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), positions.size());
 
         for (int p : positions) {
