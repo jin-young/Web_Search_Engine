@@ -2,10 +2,13 @@ package edu.nyu.cs.cs2580;
 
 import static org.easymock.EasyMock.createMock;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.Arrays;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -14,177 +17,114 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 public class IndexerInvertedCompressedTest {
 	private ArrayList<Short> shortList;
+	private Options _options;
 
 	private IndexerInvertedCompressed indexer;
 
+	/*
+	 * Brief 1=[(1, 1, [1])], 
+	 * 2=[(1, 1, [2])], 
+	 * Search 3=[(1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20]), 
+	 * engines 4=[129, 129, 132, 129, 129, 148], 
+	 * 5=[129, 129, 133, 137, 129, 138], 
+	 * 6=[129, 129, 134, 137, 129, 141], 
+	 * 7=[129, 129, 135, 137, 129, 133], 
+	 * 8=[129, 129, 136], 
+	 * 9=[129, 129, 137], 
+	 * 10=[(1, 1, [10]), (1, 2, [9, 7])], 
+	 * 11=[129, 129, 139], 
+	 * 12=[129, 129, 140], 
+	 * 13=[129, 129, 141], 
+	 * 14=[130, 129, 129, 136, 129, 144], 
+	 * 15=[130, 129, 130], 
+     * 16=[130, 129, 131], 
+	 * 17=[130, 129, 132, 136, 129, 129], 
+	 * 19=[130, 129, 134], 
+	 * 18=[130, 129, 133, 136, 129, 130],
+     * 20=[130, 130, 135, 134],  
+	 * 21=[130, 129, 136], 
+	 * 22=[130, 129, 138], 
+     * 23=[130, 129, 139], 
+     * 24=[130, 129, 140],  
+	 * 25=[130, 129, 142], 
+     * 26=[130, 129, 143],
+	 * 27=[130, 129, 145], 
+     * 28=[130, 129, 146, 136, 129, 147], 
+	 * 29=[138, 129, 131], 
+     * 30=[138, 129, 132], 
+	 * 31=[138, 129, 134], 
+     * 32=[138, 129, 135],  
+	 * topics 33=[10, 1, 8],
+     * 34=[138, 129, 137], 
+     * 35=[138, 129, 139], 
+	 * 36=[138, 130, 140, 134], 
+	 * 37=[138, 129, 142]}
+     * 38=[138, 129, 143], 
+     * 39=[138, 129, 145]
+	 */
+	
+	String doc1 = "Brief Description: Search engines have become a " + 
+            "core part of our daily lives. search ";
+	
+    String doc2 = "In this course, we will " +
+            "study the foundations of information retrieval and the " +
+            "technical aspects of modern Web search engines. ";
+    
+    String doc10 = "We will " +
+            "also explore a few advanced topics that have emerged " + 
+            "to become highly influential in relation to Web search. ";
+    
 	@Before
 	public void setUp() {
-		Options _options = createMock(SearchEngine.Options.class);
+	    _options = createMock(SearchEngine.Options.class);
 		_options._indexerType = "inverted-compressed";
 		_options._corpusAnalyzerType = "";
 		_options._logMinerType = "";
+		_options._indexPrefix = "data/test_index";
 		
 		indexer = (IndexerInvertedCompressed) Indexer.Factory
 				.getIndexerByOption(_options);
 		
-		// (2 1 2) (4 4 132 3 20000 11) (5 130 1 2 3 4 5 6)
-		shortList = new ArrayList<Short>();
-		shortList.add((short) 0x82);
-		shortList.add((short) 0x81);
-		shortList.add((short) 0x82);
-		
-		shortList.add((short) 0x84);
-		shortList.add((short) 0x84);
-		shortList.add((short) 0x01);
-		shortList.add((short) 0x84);
-		shortList.add((short) 0x83);
-		shortList.add((short) 0x01);
-		shortList.add((short) 0x1C);
-		shortList.add((short) 0xA0);
-		shortList.add((short) 0x8B);
-		
-		shortList.add((short) 0x85);
-		shortList.add((short) 0x01);
-		shortList.add((short) 0x82);
-		shortList.add((short) 0x81);
-		shortList.add((short) 0x82);
-		shortList.add((short) 0x83);
-		shortList.add((short) 0x84);
-		shortList.add((short) 0x85);
-		shortList.add((short) 0x86);
+		shortList = new ArrayList<Short>(Arrays.asList(new Short[] {
+		    // (2 1 2)
+	        0x82, 0x81, 0x82,
+	        // (4 4 132 3 20000 11)
+	        0x84, 0x84, 0x01, 0x84, 0x83, 0x01, 0x1C, 0xA0, 0x8B,
+	        // (5 130 1 2 3 4 5 6)
+	        0x85, 0x01, 0x82, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86
+		}));
 	}
 
-	@Test
-	public void testEncodeVbyte() {
-		assertThat(indexer.encodeVbyte(1), is(new short[] { 0x81 }));
-		assertThat(indexer.encodeVbyte(6), is(new short[] { 0x86 }));
-		assertThat(indexer.encodeVbyte(127), is(new short[] { 0xFF }));
-		assertThat(indexer.encodeVbyte(128), is(new short[] { 0x01, 0x80 }));
-		assertThat(indexer.encodeVbyte(130), is(new short[] { 0x01, 0x82 }));
-		assertThat(indexer.encodeVbyte(20000), is(new short[] { 0x01, 0x1C,
-				0xA0 }));
-	}
-
-	@Test
-	public void testDecodeVbyte() {
-		assertThat("Number of occurance of first group was wrong",
-				indexer.decodeVbyte(1, shortList), is(1));
-
-		assertThat("Number of occurance of second group was wrong",
-				indexer.decodeVbyte(4, shortList), is(4));
-
-		assertThat("Decoding single byte at position 2 was incorrect ",
-				indexer.decodeVbyte(2, shortList), is(2));
-
-		assertThat("Decoding single byte at position 7 was incorrect ",
-				indexer.decodeVbyte(7, shortList), is(3));
-
-		assertThat("Decoding single byte at position 11 was incorrect ",
-				indexer.decodeVbyte(11, shortList), is(11));
-
-		assertThat("Decoding multibytes from position 5 was incorrect ",
-				indexer.decodeVbyte(5, shortList), is(132));
-
-		assertThat("Decoding multibytes from position 9 was incorrect ",
-				indexer.decodeVbyte(8, shortList), is(20000));
-	}
-
-	@Test
-	public void testNextPosition() {
-		// (2 1 2) (4 4 123 3 20000 11)
-		for (int i = 0; i <= 2; i++) {
-			assertThat("Next position after one byte value at " + i,
-					indexer.nextPosition(i, shortList), is(i + 1));
-		}
-
-		assertThat("Next position after multi-byte value at 5",
-				indexer.nextPosition(5, shortList), is(7));
-
-		assertThat("Next position after multi-byte value at 8",
-				indexer.nextPosition(8, shortList), is(11));
-	}
-	
-	@Test
-	public void testHowManyAppeared() {
-		assertThat(indexer.howManyAppeared(0, shortList), is(1));
-		assertThat(indexer.howManyAppeared(3, shortList), is(4));
-		assertThat(indexer.howManyAppeared(12, shortList), is(130));
-	}
-	
-
-	/*
-     {
-         Brief 1=[1], 
-         2=[2], 
-         Search 3=[3, 29, 21], 
-         engines 4=[4, 29], 
-         5=[5, 38], 
-         6=[6, 40], 
-         7=[7, 31], 
-         8=[8], 
-         9=[9], 
-         10=[10, 12, 7],
-         11=[11], 
-         12=[12], 
-         13=[13], 
-         14=[14, 35], 
-         15=[15], 
-         17=[17, 17], 
-         16=[16], 
-         19=[19], 
-         18=[18, 17], 
-         21=[21], 
-         20=[20, 6], 
-         23=[24], 
-         22=[23], 
-         25=[27], 
-         24=[25], 
-         27=[30], 
-         26=[28], 
-         29=[36], 
-         28=[31, 21], 
-         31=[39], 
-         30=[37], 
-         34=[42], 
-         35=[44], 
-         32=[40], 
-         33=[41], 
-         38=[48], 
-         39=[50], 
-         36=[45, 6], 
-         37=[47]}>
-	 */
 	@Test
 	public void testWordsPositionsInDoc() {
+	    /*
 	    String doc = "Brief Description: Search engines have become a " + 
 	                "core part of our daily lives. In this course, we will " +
 	                "study the foundations of information retrieval and the " +
 	                "technical aspects of modern Web search engines. We will " +
 	                "also explore a few advanced topics that have emerged " + 
-	                "to become highly influential in relation to Web search. ";
+	                "to become highly influential in relation to Web search. ";*/
 	    
-	    // doc's words' positions are described above current method 
-	    
-	    Map<Integer, ArrayList<Integer>> result = indexer.wordsPositionsInDoc(doc, 1);
+	    SkipPointer result = indexer.wordsPositionsInDoc(doc1 + doc2 + doc10);
 	    
 	    assertThat("Result shouhd have 39 kyes", result.keySet().size(), is(39));
-	    assertThat("Brief shouhd exist only one", result.get(1).size(), is(1));
+	    assertThat("Brief shouhd appear only one time", result.get(1).size(), is(1));
 	    
-	    assertThat("Search shouhd exist three", result.get(3).size(), is(3));
-	    assertThat("Search's position should be [3, 29, 21]", 
-	                    result.get(3).toArray(new Integer[1]), is(new Integer[]{3, 29, 21} ));
+	    assertThat("Search shouhd appear four times", result.get(3).size(), is(4));
+	    assertThat("Search's position should be [3, 11, 19, 21]", 
+	                    result.get(3).toArray(new Integer[1]), is(new Integer[]{3, 11, 19, 21} ));
 	    
-	    assertThat("Engine shouhd exist two", result.get(4).size(), is(2));
+	    assertThat("Engine shouhd appear two times", result.get(4).size(), is(2));
         assertThat("Engine's position should be [4, 29]", 
-                        result.get(4).toArray(new Integer[1]), is(new Integer[]{4, 29} ));	    
+                        result.get(4).toArray(new Integer[1]), is(new Integer[]{4, 30} ));	    
         
-        assertThat("Web shouhd exist two", result.get(28).size(), is(2));
+        assertThat("Web shouhd appear two times", result.get(28).size(), is(2));
         assertThat("Web's position should be [31, 21]", 
-                        result.get(28).toArray(new Integer[1]), is(new Integer[]{31, 21} ));
+                        result.get(28).toArray(new Integer[1]), is(new Integer[]{32, 21} ));
         
-        assertThat("relation shouhd exist one", result.get(39).size(), is(1));
+        assertThat("relation shouhd appear one time", result.get(39).size(), is(1));
         assertThat("relation's position should be [50]", 
-                        result.get(39).toArray(new Integer[1]), is(new Integer[]{50} ));
+                        result.get(39).toArray(new Integer[1]), is(new Integer[]{51} ));
 	}
 	
 	@Test
@@ -199,4 +139,277 @@ public class IndexerInvertedCompressedTest {
 	                    indexer.trimPunctuation(test[0]), is(test[1]));
 	    }
 	}
+	
+	@Test
+	public void testAddPositionsToIndex() {
+	    ArrayList<Integer> positions = new ArrayList<Integer>(
+	            Arrays.asList(new Integer[]{3, 29, 21})
+        );
+	    
+	    indexer.setIndex(new CompressedIndex());
+	    
+	    int wordId = 11;
+	    int docId = 20000;
+	    int offset = indexer.addPositionsToIndex(positions, docId, wordId);
+	    
+	    assertThat("Seven bytes should be added", offset, is(7));
+	    
+	    ArrayList<Short> expect = new ArrayList<Short>(
+	            Arrays.asList(new Short[]{0x01, 0x1C, 0xA0, 0x83, 0x83, 0x9D, 0x95})
+        );
+	    assertThat(indexer.getIndex().get(wordId), is(expect));
+	}
+	
+	@Test
+	public void testLastDocId() {
+	    assertThat("If there is no word, last doc id should be 0", indexer.lastDocId(11), is(0));
+	    
+	    SkipPointer mockList = new SkipPointer();
+	    
+	    ArrayList<Integer> word11 = new ArrayList<Integer>();
+	    //doc id, offset
+	    word11.add(3);word11.add(7);
+	    //doc id, offset
+	    word11.add(5);word11.add(11);
+	    mockList.put(11, word11);
+	    
+	    ArrayList<Integer> word5 = new ArrayList<Integer>();
+       //doc id, offset
+	    word5.add(1);word5.add(7);
+        mockList.put(5, word5);
+        
+        ArrayList<Integer> word33 = new ArrayList<Integer>();
+        //doc id, offset
+        word33.add(1);word33.add(7);
+        word33.add(2);word33.add(8);
+        word33.add(4);word33.add(3);
+        word33.add(6);word33.add(10);
+         mockList.put(33, word33);
+        
+	    indexer.setSkipPointer(mockList);
+	    
+	    assertThat("Last doc id of word 11 should be 5", indexer.lastDocId(11), is(5));
+	    
+	    assertThat("If there is no word, last doc id should be 0", indexer.lastDocId(12), is(0));
+	    
+	    assertThat("Last doc id of word 5 should be 1", indexer.lastDocId(5), is(1));
+	    assertThat("Last doc id of word 33 should be 6", indexer.lastDocId(33), is(6));
+	}
+	
+	@Test
+	public void testInitIndex() {
+	    int wordId = 11;
+	    assertThat(indexer.getIndex().get(wordId), nullValue());
+	    
+	    //if there is no list, then create new one
+	    indexer.initIndex(11);
+	    assertThat(indexer.getIndex().get(wordId).size(), is(0));
+	    
+	    //if exist, nothing
+	    int wordId2 = 5;
+	    indexer.getIndex().put(wordId2, shortList);
+	    assertThat(indexer.getIndex().size(), is(2));
+	    
+	    indexer.initIndex(wordId2);
+	    assertThat(indexer.getIndex().size(), is(2));
+	    assertThat(indexer.getIndex().get(wordId2), is(shortList));
+	}
+	
+    @Test
+    public void testInitSkipPointer() {
+        int wordId = 11;
+        assertThat(indexer.getSkipPointer().get(wordId), nullValue());
+        
+        //if there is no list, then create new one
+        indexer.initSkipPointer(11);
+        assertThat(indexer.getSkipPointer().get(wordId).size(), is(0));
+        
+        
+        int wordId2 = 5;
+        ArrayList<Integer> skipInfo = new ArrayList<Integer>(Arrays.asList(new Integer[]{2, 3, 5, 7}));
+        indexer.getSkipPointer().put(wordId2, skipInfo);
+        assertThat(indexer.getSkipPointer().size(), is(2));
+        
+        //if exist, nothing
+        indexer.initSkipPointer(wordId2);
+        assertThat(indexer.getSkipPointer().size(), is(2));
+        assertThat(indexer.getSkipPointer().get(wordId2), is(skipInfo));
+    }	
+    
+    @Test
+    public void testAddSkipInfo() {
+        int wordId = 5, docId = 1, length = 2;
+        
+        assertThat(indexer.addSkipInfo(wordId, docId, length), is(2));
+        assertThat(indexer.lastDocId(wordId), is(1));
+        assertThat(indexer.lastPosition(wordId), is(2));
+        
+        assertThat(indexer.addSkipInfo(wordId, 3, 4), is(6));
+        assertThat(indexer.lastDocId(wordId), is(3));
+        assertThat(indexer.lastPosition(wordId), is(6));
+        
+        assertThat(indexer.addSkipInfo(11, 2, 4), is(4));
+        assertThat(indexer.lastDocId(wordId), is(3));
+        assertThat(indexer.lastPosition(wordId), is(6));
+        
+        assertThat(indexer.lastDocId(11), is(2));
+        assertThat(indexer.lastPosition(11), is(4));
+        
+        assertThat(indexer.addSkipInfo(wordId, 9, 7), is(13));
+        assertThat(indexer.lastDocId(wordId), is(9));
+        assertThat(indexer.lastPosition(wordId), is(13));
+    }
+    
+    @Test
+    public void testGetPartialIndexName() {
+        assertThat(indexer.getPartialIndexName(1, 2), is(_options._indexPrefix + "/index_01_2.idx"));
+        assertThat(indexer.getPartialIndexName(29, 1), is(_options._indexPrefix + "/index_29_1.idx"));
+    }
+    
+    @Test
+    public void testGetPartialSkipPointerName() {
+        assertThat(indexer.getPartialSkipPointerName(1, 2), is(_options._indexPrefix + "/skip_01_2.idx"));
+        assertThat(indexer.getPartialSkipPointerName(29, 1), is(_options._indexPrefix + "/skip_29_1.idx"));
+    }
+    
+    @Test
+    public void testMakeIndex() {
+        indexer.makeIndex(doc1, 1);
+        assertThat(indexer._dictionary.size(), is(13));
+        
+        ArrayList<Short> posting = indexer.getIndex().get(3);
+        ArrayList<Integer> expectedSkipPoint = 
+                new ArrayList<Integer>(Arrays.asList(new Integer[]{1,4}));
+                
+        //this posting should be (1, 2, [3, 11])
+        int[] indexV = new int[]{1, 2, 3, 11};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        
+        assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
+        
+        indexer.makeIndex(doc2, 2);
+        assertThat(indexer._dictionary.size(), is(28));
+        
+        posting = indexer.getIndex().get(3);
+        expectedSkipPoint.add(2); expectedSkipPoint.add(7);
+        //this posting should be (1, 2, [3, 11]), (1, 1, [19])
+        indexV = new int[]{1, 2, 3, 11, 1, 1, 19};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        
+        assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
+        
+        indexer.makeIndex(doc10, 10);
+        assertThat(indexer._dictionary.size(), is(39));
+      
+        posting = indexer.getIndex().get(3);
+        expectedSkipPoint.add(10);expectedSkipPoint.add(10);  
+        //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
+        indexV = new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        
+        assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
+    }
+    
+    @Test
+    public void testWriteToFile() throws Exception {
+        //This is not a good test because it does actual file writing and reading
+        //However, I don't have enough time to refactor this method and class.
+        
+        File testDir = new File(_options._indexPrefix);
+        deleteDirectory(testDir);
+        testDir.mkdirs();
+        
+        indexer.makeIndex(doc1, 1);
+        indexer.makeIndex(doc2, 2);
+        indexer.makeIndex(doc10, 10);
+        
+        System.out.println(indexer.getIndex());
+        
+        indexer.writeToFile(1);
+        
+        CompressedIndex tempIndex = loadIndex(3,1);
+        SkipPointer skip = loadSkipPointer(3, 1);
+        
+        ArrayList<Short> posting = tempIndex.get(3);
+        //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
+        int[] indexV = new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        ArrayList<Integer> skipInfo = skip.get(3);
+        assertThat(skipInfo, is(new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{1, 4, 2, 7, 10, 10})
+        )));
+        
+        posting = tempIndex.get(33);
+        //this posting should be (10, 1, 8)
+        indexV = new int[]{10, 1, 8};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        skipInfo = skip.get(33);
+        assertThat(skipInfo, is(new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{10, 3})
+        )));
+        
+        assertThat("word id 4 should be stored in 4th index", tempIndex.get(4), nullValue());
+        
+        tempIndex = loadIndex(10,1);
+        skip = loadSkipPointer(10, 1);
+        
+        posting = tempIndex.get(10);
+        //this posting should be (1, 1, [10]), (1, 2, [9, 7])
+        indexV = new int[]{1, 1, 10, 1, 2, 9, 7};
+        for(int i=0; i<indexV.length; i++) {
+            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
+        }
+        skipInfo = skip.get(10);
+        assertThat(skipInfo, is(new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{1, 3, 2, 7})
+        )));
+        
+        deleteDirectory(testDir);
+    }
+    
+    private CompressedIndex loadIndex(int indexId, int round) throws Exception {
+        ObjectInputStream reader = 
+                indexer.createObjInStream(indexer.getPartialIndexName(indexId, round));
+        CompressedIndex index = (CompressedIndex)reader.readObject();
+        reader.close();
+        
+        return index;
+    }
+    
+    private SkipPointer loadSkipPointer(int indexId, int round) throws Exception {
+        ObjectInputStream reader = 
+                indexer.createObjInStream(indexer.getPartialSkipPointerName(indexId, round));
+        SkipPointer skip = (SkipPointer)reader.readObject();
+        reader.close();
+        
+        return skip;
+    }    
+    
+    private boolean deleteDirectory(File directory) {
+        if(directory.exists()){
+            File[] files = directory.listFiles();
+            if(null!=files){
+                for(int i=0; i<files.length; i++) {
+                    if(files[i].isDirectory()) {
+                        deleteDirectory(files[i]);
+                    }
+                    else {
+                        files[i].delete();
+                    }
+                }
+            }
+        }
+        return(directory.delete());
+    }
+
 }

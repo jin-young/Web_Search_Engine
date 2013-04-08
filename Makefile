@@ -19,3 +19,7 @@ jtest: jtest_compile
 
 jtest_compile: compile
 	javac -cp ./test -classpath ./src:./test:./libs/jsoup-1.7.2.jar:$(TEST_LIBS) $$($(TEST_SOURCES))
+
+index: compile
+	java -cp ./src -classpath ./src:./libs/jsoup-1.7.2.jar -Xmx512m edu.nyu.cs.cs2580.SearchEngine \
+-mode=index --port=25804 --options=conf/engine.conf
