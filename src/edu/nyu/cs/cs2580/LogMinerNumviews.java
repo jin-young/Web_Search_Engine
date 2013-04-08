@@ -21,7 +21,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class LogMinerNumviews extends LogMiner {
 
-	protected Map<String, Integer> _numview = new HashMap<String, Integer>();
+	static Map<String, Integer> _numview = new HashMap<String, Integer>();
 
 	public LogMinerNumviews(Options options) {
 		super(options);
@@ -59,20 +59,48 @@ public class LogMinerNumviews extends LogMiner {
 		String line;
 
 		while ((line = read.readLine()) != null) {
-		   String[] lineSplit = line.split(" ");
-		   if(lineSplit.length == 3){
-			   try{
-			   String temp = URLDecoder.decode(lineSplit[1], "UTF-8");
-			   if(_numview.containsKey(temp))
-			   _numview.put(temp, _numview.get(temp)+Integer.parseInt(lineSplit[2]));
-			   } catch(IllegalArgumentException e){
-
-			   }
-		   }
+            String[] lineSplit = line.split(" ");
+            if(lineSplit.length == 3){
+                try{
+                	String data = lineSplit[1];
+                	String[] slashSplit = data.split("/");
+                	String data2="";
+                	if(slashSplit!=null && slashSplit.length!=0)
+                		data2=slashSplit[slashSplit.length-1];
+                	StringBuffer tempBuffer = new StringBuffer();
+                	int incrementor = 0;
+                    int dataLength = data2.length();
+                    while (incrementor < dataLength) {
+                    	 char charecterAt = data2.charAt(incrementor);
+                         if (charecterAt == '%') {
+                            tempBuffer.append("<percentage>");
+                         } else {
+                            tempBuffer.append(charecterAt);
+                         }
+                         incrementor++;
+                    }
+                    
+                    data2 = tempBuffer.toString();
+                    
+                    String temp = URLDecoder.decode(data2, "UTF-8");
+                    if(_numview.containsKey(temp)){
+                    	String numview =  lineSplit[2];
+                    	if(numview.equals("")||numview==null||numview.length()==0)
+                    		 numview="0";
+                    	
+                    	int numviewInt = Integer.parseInt(numview);
+                    	
+                    	 _numview.put(temp, numviewInt);
+                    }
+                } catch(IllegalArgumentException e){
+               // 	 System.err.println(e.getMessage());
+                }
+            }else{
+            	//wrong format log
+            }
 		}
 		read.close();
 		
-
 		return;
 	}
 
