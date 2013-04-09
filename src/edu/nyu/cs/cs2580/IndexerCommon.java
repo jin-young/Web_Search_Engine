@@ -319,4 +319,29 @@ public abstract class IndexerCommon extends Indexer {
             }
         }
     }
+    
+    @Override
+    public Document nextDoc(Query query, int curDocId) {
+        Vector<Integer> _nextDocIds = new Vector<Integer>();
+        int nextDocId = -1;
+
+        // find next document for each query
+        for (String token : query._tokens) {
+            try {
+                if (token.contains(" "))
+                    nextDocId = nextPhrase(token, curDocId);
+                else
+                    nextDocId = next(token, curDocId);
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            } 
+            if (nextDocId == -1) return null;
+            _nextDocIds.add(nextDocId);
+        }
+        // found!
+        if (equal(_nextDocIds)) return getDoc(_nextDocIds.get(0));
+
+        // search next
+        return nextDoc(query, Max(_nextDocIds) - 1);
+    }
 }
