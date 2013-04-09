@@ -20,6 +20,11 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     protected Map<String, Document> documents = null;
+    protected MapMatrix corpusGraph = null;
+    
+    protected int DIV = 1000;
+    double lambda = 0.1;    // 0.1 or 0.9 
+    int iterateNum = 1;        // 1 or 2
     
     public CorpusAnalyzerPagerank(Options options) {
         super(options);
@@ -63,8 +68,9 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
             }
         }
         
-        //MapMatrix matrix = buildCorpusGraph(corpus);
-
+        // make Link Matrix
+        //buildCorpusGraph(corpus);
+       
         return;
     }
     
@@ -91,6 +97,13 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         //for(String name : documents.keySet()) {
         //    pageRank.put(name, documents.get(name).getPageRank());
         //}
+        
+        // Build Google Matrix
+        buildGoogleMatrix();
+
+        // Calculate PageRank Value
+        calPageRank();
+        
         String filePath = _options._indexPrefix + "/pageRank.dat";
         ObjectOutputStream writer = 
                 new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath)));
@@ -148,38 +161,72 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         return result;
     }
 
-    protected MapMatrix buildCorpusGraph(Map<String, Document> corpus) throws IOException {
-        MapMatrix matrix = new MapMatrix();
+    protected void buildCorpusGraph(Map<String, Document> corpus) throws IOException {
         
-        int count = 1;
+        int count = 0;
         for (String fName : corpus.keySet()) {
-            if (count % 1000 == 0)
-                System.out.println(count + " have been processed");
-
             Document currentDoc = corpus.get(fName);
+            int sumLinks = 0;
+            
+            Map<Integer, Float> rows = null;
+            if (corpusGraph.containsKey(currentDoc._docid)) {
+                rows = corpusGraph.get(currentDoc._docid);
+            } else {
+                rows = new HashMap<Integer, Float>();
+                corpusGraph.put(currentDoc._docid, rows);
+            }
             
             for (String href : getAchors(fName)) {
                 if (corpus.containsKey(href)) {
-                    Map<Integer, Float> rows = null;
                     Document targetDoc = corpus.get(href);
-                    if (matrix.containsKey(currentDoc._docid)) {
-                        rows = matrix.get(currentDoc._docid);
-                    } else {
-                        rows = new HashMap<Integer, Float>();
-                        matrix.put(currentDoc._docid, rows);
-                    }
-
+                   
                     if (rows.containsKey(targetDoc._docid)) {
                         rows.put(targetDoc._docid, rows.get(targetDoc._docid) + 1.0f);
                     } else {
                         rows.put(targetDoc._docid, 1.0f);
                     }
+                    sumLinks++;
                 }
             }
-
-            count++;
+            
+            // Normalization of each files
+            for(Integer targetDocid : rows.keySet())
+                rows.put(targetDocid, rows.get(targetDocid) / sumLinks);
+                        
+            // Save into File / every 1000 files
+            if (count != 0 && count % 1000 == 0)
+                writeCorpusGraph(count);
+            
+            count++;            
         }
-        return matrix;
+        
+        // Save remain data into File
+        if(!corpusGraph.isEmpty())
+            writeCorpusGraph(count);
+    }
+    
+    protected void writeCorpusGraph(int index){
+        try {
+            String fileName = _options._indexPrefix + "/corpusGraph_" + String.format("%02d",  index/DIV) + ".dat";
+            ObjectOutputStream writer 
+                    = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(fileName), 1024));
+            writer.writeObject(corpusGraph);
+            writer.close();
+            writer = null;
+            corpusGraph.clear();
+            System.out.println("Save : " + fileName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during partial index writing");
+        }
+    }
+    
+    protected void buildGoogleMatrix(){
+        
+    }
+        
+    protected void calPageRank(){
+        
     }
     
     // Actually, below algorithm looks like having performance O(n^3) if worst case is given.

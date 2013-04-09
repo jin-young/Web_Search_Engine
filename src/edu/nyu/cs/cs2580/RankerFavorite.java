@@ -24,12 +24,13 @@ public class RankerFavorite extends Ranker {
     public Vector<ScoredDocument> runQuery(Query query, int numResults) {
         Vector<ScoredDocument> rankList = new Vector<ScoredDocument>();
         Vector<DocumentIndexed> docList = new Vector<DocumentIndexed>();
-
+        
         DocumentIndexed doc = null;
         int docid = -1;
         while ((doc = (DocumentIndexed) _indexer.nextDoc(query, docid)) != null) {
 
             if (!docList.contains(doc)) {
+                
                 rankList.add(scoreDocument(query, doc));
                 docList.add(doc);
 

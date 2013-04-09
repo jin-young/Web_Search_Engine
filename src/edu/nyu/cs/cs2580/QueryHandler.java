@@ -198,6 +198,7 @@ class QueryHandler implements HttpHandler {
         StringBuffer response = new StringBuffer();
         // Search Mode
         if(uriPath.equals("/search")){
+            System.out.println("Search Processing ...");
             switch (cgiArgs._outputFormat) {
             case TEXT:
                 constructTextOutput(scoredDocs, response);
@@ -211,6 +212,7 @@ class QueryHandler implements HttpHandler {
         }
         // Pseudo-Relevance Feedback Mode
         else if(uriPath.equals("/prf")){
+            System.out.println("PRF Processing ...");
             computeRepresent(scoredDocs, response, cgiArgs._numterms);
         }
         
