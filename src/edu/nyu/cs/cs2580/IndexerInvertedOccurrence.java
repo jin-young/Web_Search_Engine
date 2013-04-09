@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -255,8 +256,8 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 
 		// Load Dictionary file
 		String dicFile = _options._indexPrefix + "/dictionary.idx";
-		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(
-				dicFile));
+		ObjectInputStream reader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(
+				dicFile)));
 		IndexerInvertedOccurrence loaded = (IndexerInvertedOccurrence) reader
 				.readObject();
 		System.out.println("Load dictionary from: " + dicFile);
