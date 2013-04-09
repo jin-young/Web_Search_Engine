@@ -40,6 +40,8 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	protected int t_numDocs;
 	protected long t_totalTermFrequency;
 
+	private Map<Integer, Document> _documentsById = null;
+	
 	// Provided for serialization
 	public IndexerInvertedOccurrence() {
 	}
@@ -261,13 +263,18 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 		IndexerInvertedOccurrence loaded = (IndexerInvertedOccurrence) reader
 				.readObject();
 		System.out.println("Load dictionary from: " + dicFile);
-
+		reader.close();
+		
 		this._documents = loaded.t_documents;
 		this._dictionary = loaded.t_dictionary;
 		this._numDocs = loaded.t_numDocs;
 		this._totalTermFrequency = loaded.t_totalTermFrequency;
-
-		reader.close();
+		
+		_documentsById = new HashMap<Integer, Document>();
+        
+        for(Document d : _documents.values()) {
+            _documentsById.put(d._docid, d);
+        }
 
 		System.out.println(Integer.toString(_numDocs) + " documents loaded "
 				+ "with " + Long.toString(_totalTermFrequency) + " terms!");
@@ -275,7 +282,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 
 	@Override
 	public Document getDoc(int docid) {
-		return _documents.get(docid);
+		return _documentsById.get(docid);
 	}
 
 	/**
@@ -316,7 +323,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 			_nextDocIds.add(nextDocId);
 		}
 		// found!
-		if (equal(_nextDocIds))  return _documents.get(_nextDocIds.get(0));
+		if (equal(_nextDocIds))  return _documentsById.get(_nextDocIds.get(0));
 
 		// search next
 		return nextDoc(query, Max(_nextDocIds) - 1);

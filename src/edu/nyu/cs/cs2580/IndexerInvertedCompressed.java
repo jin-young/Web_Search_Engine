@@ -51,18 +51,17 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
-    int count = 0;
+    
     @Override
     public Document nextDoc(Query query, int docid) {
         Vector<Integer> docs = new Vector<Integer>();
         int doc = -1;
-System.out.println("ND : " + count++);
 
         // find next document for each query
         for (int i = 0; i < query._tokens.size(); i++) {
             try {
                 if (query._tokens.get(i).contains(" ")) {
-
+                    
                 } else {
                     doc = next(query._tokens.get(i), docid);
                 }
@@ -248,7 +247,7 @@ System.out.println("ND : " + count++);
     
     @Override
     public Document getDoc(int docid) {
-        return _documents.get(docid);
+        return _documentsById.get(docid);
     }
     
     @Override
