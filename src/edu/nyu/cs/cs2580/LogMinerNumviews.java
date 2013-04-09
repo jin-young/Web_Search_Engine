@@ -97,8 +97,8 @@ public class LogMinerNumviews extends LogMiner {
                     	
                     	 _numview.put(temp, numviewInt);
                     }
-                } catch(IllegalArgumentException e){
-               // 	 System.err.println(e.getMessage());
+                } catch(Exception e){
+                    System.err.println(e.getMessage());
                 }
             }else{
             	//wrong format log
@@ -106,7 +106,7 @@ public class LogMinerNumviews extends LogMiner {
 		}
 		read.close();
 		
-		String dicFile = "data/numview.idx";
+		String dicFile = "data/numview";
 		ObjectOutputStream writer = new ObjectOutputStream(
 				new FileOutputStream(dicFile));
 		writer.writeObject(_numview);
@@ -124,7 +124,7 @@ public class LogMinerNumviews extends LogMiner {
 	@Override
 	public Object load() throws IOException {
 		System.out.println("Loading using " + this.getClass().getName());
-		 FileInputStream fis = new FileInputStream("data/numview.idx");
+		 FileInputStream fis = new FileInputStream("data/numview");
 	        ObjectInputStream reader = new ObjectInputStream(fis);
 	        Map<String, Integer> new_numview=null;
 			try {

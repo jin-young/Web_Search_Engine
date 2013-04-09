@@ -13,8 +13,11 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW3.
  */
 public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
+    protected Map<String, Document> documents = null;
+    
     public CorpusAnalyzerPagerank(Options options) {
         super(options);
+        documents = new HashMap<String, Document>();
     }
 
     /**
@@ -41,19 +44,21 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         System.out.println("Preparing " + this.getClass().getName());
 
         File folder = new File(_options._corpusPrefix);
-        Map<String, Document> corpus = new HashMap<String, Document>();
+        //Map<String, Document> corpus = new HashMap<String, Document>();
 
         int docId = 0;
-        System.out.println("L F");
         for (File f : folder.listFiles()) {
             if (f.isFile()) {
                 Document d = new Document(docId++);
-                corpus.put(f.getName(), d);
+                //TODO: remove below mock code after implementing all.
+                d.setTitle(f.getName());
+                d.setPageRank((float)Math.random());
+                //TODO: remove above mock code after implementing all.
+                documents.put(f.getName(), d);
             }
         }
-        System.out.println("L F D");
-
-        MapMatrix matrix = buildMatrix(corpus);
+        
+        //MapMatrix matrix = buildCorpusGraph(corpus);
 
         return;
     }
@@ -74,6 +79,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     @Override
     public void compute() throws IOException {
         System.out.println("Computing using " + this.getClass().getName());
+        
         return;
     }
 
@@ -108,11 +114,9 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         return result;
     }
 
-    protected MapMatrix buildMatrix(Map<String, Document> corpus) throws IOException {
-        System.out.println("G M");
+    protected MapMatrix buildCorpusGraph(Map<String, Document> corpus) throws IOException {
         MapMatrix matrix = new MapMatrix();
-        System.out.println("G M D");
-
+        
         int count = 1;
         for (String fName : corpus.keySet()) {
             if (count % 1000 == 0)
@@ -144,8 +148,9 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         return matrix;
     }
     
-    //Actually, below algorithm looks like having performance O(n^3) if worst case is given.
-    //However, it does not happen in real world because each document contains not much number of links.
+    // Actually, below algorithm looks like having performance O(n^3) if worst case is given.
+    // However, it does not happen in real world because each document contains not much number of links.
+    // Thus, the time complexity is O(n*k^2). 
     protected MapMatrix matrixMulti(MapMatrix m1, MapMatrix m2) {
         MapMatrix result = new MapMatrix();
         
