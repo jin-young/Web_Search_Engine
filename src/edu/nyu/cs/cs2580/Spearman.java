@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -42,9 +43,10 @@ public class Spearman {
 
     }
 
-    public static Object load(String path) throws IOException {
+    @SuppressWarnings("unchecked")
+    public static Map<String, Document> load(String path) throws IOException {
         FileInputStream fis = new FileInputStream(path);
-        ObjectInputStream reader = new ObjectInputStream(fis);
+        ObjectInputStream reader = new ObjectInputStream(new BufferedInputStream(fis));
         Map<String, Document> new_data = null;
         try {
             new_data = (Map<String, Document>) reader.readObject();
@@ -60,8 +62,9 @@ public class Spearman {
          if(args.length!=2){
         	 System.out.println("Please provide 2 parameters"); } 
          else{
-	         Map<String, Document> numview=(Map<String, Document>) load(args[1]); 
-	         Map<String, Document> pagerank=(Map<String,Document>) load(args[0]);
+	         Map<String, Document> numview = load(args[1]); 
+	         Map<String, Document> pagerank = load(args[0]);
+	         
 	         List<Document> sortednumview =sorting(numview);
 	         List<Document> sortedpagerank =sorting(pagerank);
 	         Float result=calculate(sortednumview,sortedpagerank);
