@@ -42,7 +42,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         _skipPointer = new SkipPointer();
         lastProcessedDocInfo = new HashMap<Integer, Integer[]>();
 
-        DIV = 1000;
+        DIV = 500;
 
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
@@ -124,11 +124,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
-        ObjectInputStream reader = createObjInStream(getIndexerFileName("/indexer.idx"));
+        ObjectInputStream reader = createObjInStream(getIndexerFileName());
         IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
 
         if (!underTest)
-            System.out.println("Load Indexer from: " + getIndexerFileName("/indexer.idx"));
+            System.out.println("Load Indexer from: " + getIndexerFileName());
 
         this._documents = loaded.t_documents;
         this._dictionary = loaded.t_dictionary;
@@ -143,8 +143,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
     }
 
-    protected String getIndexerFileName(String name) {
-        return _options._indexPrefix + name;
+    protected String getIndexerFileName() {
+        return _options._indexPrefix + "/indexer.idx";
     }
 
     @Override
@@ -212,8 +212,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     public void writeIndexerToFile() throws IOException {
-        String dicFile = _options._indexPrefix + "/indexer.idx";
-        ObjectOutputStream writer = createObjOutStream(dicFile);
+        ObjectOutputStream writer = createObjOutStream(getIndexerFileName());
 
         // back-up variables from Indexer class
         t_documents = _documents;
@@ -221,11 +220,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
 
-        //belows are not necessary. save space and time!!
-        lastProcessedDocInfo.clear();
-        pageRanks.clear();
-        numViews.clear();
-        
         writer.writeObject(this);
         writer.close();
     }
@@ -256,7 +250,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     protected void mergePartialIndex(int lastRound) {
-
+        
+        //below is not necessary any longer. save memory!!
+        lastProcessedDocInfo.clear(); 
+        pageRanks.clear();
+        numViews.clear();        
+        //above is not necessary any longer. save memory!!
+        
         for (int idx = 0; idx < MAXCORPUS; idx++) {
             CompressedIndex finalIndex = new CompressedIndex();
             SkipPointer finalSkipPointer = new SkipPointer();
@@ -273,16 +273,20 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
                     continue;
                 } else {
-                    for (int wordId : currIndex.keySet()) {
-                        ArrayList<Short> posting = currIndex.get(wordId);
-                        ArrayList<Integer> skipInfo = currSkipPointer.get(wordId);
+                    Integer[] keys = currIndex.keySet().toArray(new Integer[1]);
+                    //the reason that using "for (int wordId : keys)" instead of
+                    // "for (int wordId : currIndex.keySet())" is to use remove
+                    //method in loop. Second method does not allow change length
+                    //of collection/list within loop.
+                    for (int wordId : keys) {
+                        ArrayList<Short> posting = currIndex.remove(wordId);
+                        ArrayList<Integer> skipInfo = currSkipPointer.remove(wordId);
 
                         if (!finalIndex.containsKey(wordId)) {
                             finalIndex.put(wordId, posting);
                             finalSkipPointer.put(wordId, skipInfo);
                         } else {
                             ArrayList<Integer> prevSkipInfo = finalSkipPointer.get(wordId);
-
                             finalIndex.get(wordId).addAll(posting);
                             prevSkipInfo.addAll(skipInfo);
                         }
