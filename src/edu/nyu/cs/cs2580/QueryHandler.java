@@ -165,8 +165,8 @@ class QueryHandler implements HttpHandler {
         if (uriPath == null || uriQuery == null) {
             respondWithMsg(exchange, "Something wrong with the URI!");
         }
-        if (!uriPath.equals("/search") || !uriPath.equals("/prf")) {
-            respondWithMsg(exchange, "Only /search or /prf are handled!");
+        if (!uriPath.equals("/search") && !uriPath.equals("/prf")) {
+            respondWithMsg(exchange, "Only /search or /prf are handled!");           
         }
         System.out.println("Query: " + uriQuery);
 
