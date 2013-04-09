@@ -23,8 +23,8 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     protected MapMatrix corpusGraph = null;
     
     protected int DIV = 1000;
-    double lambda = 0.1;    // 0.1 or 0.9 
-    int iterateNum = 1;        // 1 or 2
+    protected float lambda = 0.1f;    // 0.1 or 0.9 
+    protected int iterateNum = 1;        // 1 or 2
     
     public CorpusAnalyzerPagerank(Options options) {
         super(options);
@@ -97,9 +97,6 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         //    pageRank.put(name, documents.get(name).getPageRank());
         //}
         
-        // Build Google Matrix
-        buildGoogleMatrix();
-
         // Calculate PageRank Value
         calPageRank();
         
@@ -225,12 +222,60 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     }
     */
     
-    protected void buildGoogleMatrix(){
+    /**
+     * Transition of matrix
+     * @param matrix
+     * @return transitioned matrix
+     */
+    protected MapMatrix transMatrix(MapMatrix matrix){
+        MapMatrix result = new MapMatrix();
+        File folder = new File(_options._corpusPrefix);
         
+        int totalDocs = documents.size();
+        for(int curDocid=0; curDocid<totalDocs; curDocid++){
+            Map<Integer, Float> rows = new HashMap<Integer, Float>();
+            
+            for(Integer targetDocid : corpusGraph.keySet()){
+                Map<Integer, Float> targetDoc = corpusGraph.get(targetDocid);
+                
+                if(targetDoc.containsKey(curDocid)){
+                    rows.put(targetDocid, targetDoc.get(curDocid));
+                }
+            }
+            
+            if(!rows.isEmpty())     
+                result.put(curDocid, rows);
+        }      
+        return result;
     }
-        
+    
+    /**
+     * Calculate Page Rank Value using Random Surfer Model
+     * iteration Number : 1 or 2
+     * lambda : 0.10 or 0.90
+     */
     protected void calPageRank(){
+        corpusGraph = transMatrix(corpusGraph);
+        corpusGraph = matrixTimesScala(lambda, corpusGraph);
         
+        int totalDocs = documents.size();
+        float addConst = (1.0f-lambda) * (1.0f/(float)totalDocs);
+       
+        if(iterateNum == 1){        
+            for(String docName : documents.keySet()){
+                Document doc = documents.get(docName);
+                int docid = doc._docid;
+                float value = 0.0f;
+                for(Integer targetDocid : corpusGraph.get(docid).keySet())
+                    value += corpusGraph.get(docid).get(targetDocid);
+                value += (totalDocs - corpusGraph.get(docid).size()) * addConst;
+                doc.setPageRank(value);
+            }
+        }else if(iterateNum == 2){
+            
+            // Need G^2 calculation in here : Jinil
+            
+        }
     }
     
     // Actually, below algorithm looks like having performance O(n^3) if worst case is given.
@@ -266,7 +311,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         return result;
     }    
     
-    public MapMatrix matrixTimesScala(float v, MapMatrix m1) {
+    protected MapMatrix matrixTimesScala(float v, MapMatrix m1) {
         MapMatrix result = new MapMatrix();
         
         for(Integer docId : m1.keySet()) {
