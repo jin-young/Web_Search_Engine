@@ -18,7 +18,7 @@ public class Spearman {
         	String doc = sortednumview.get(idx).getTitle();
             temp = temp + (float) Math.pow(sortedpagerank.indexOf(doc) - sortednumview.indexOf(doc), 2.0d);
         }
-        result = (float) (1 - 6 * temp / (sortednumview.size() * Math.pow(sortednumview.size() - 1, 2.0d)));
+        result = (float) (1 - 6 * temp / (sortednumview.size() * (Math.pow(sortednumview.size(),2.0d) - 1)));
         return result;
     }
 
