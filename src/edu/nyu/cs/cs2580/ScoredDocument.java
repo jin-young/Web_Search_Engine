@@ -23,6 +23,9 @@ class ScoredDocument implements Comparable<ScoredDocument> {
     return buf.toString();
   }
 
+  public String getUrl(){
+      return _doc.getUrl();
+  }
   public double getScore(){
       return _score;
   }
