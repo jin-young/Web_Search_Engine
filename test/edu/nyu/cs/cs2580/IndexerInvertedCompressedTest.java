@@ -110,6 +110,7 @@ public class IndexerInvertedCompressedTest {
 	                "to become highly influential in relation to Web search. ";*/
 	    
 	    Map<Integer, ArrayList<Integer>> result = indexer.wordsPositionsInDoc(doc1 + doc2 + doc10);
+	    assertThat(indexer._totalTermFrequency, is(54L));
 	    
 	    assertThat("Result shouhd have 39 kyes", result.keySet().size(), is(39));
 	    assertThat("Brief shouhd appear only one time", result.get(1).size(), is(1));
@@ -275,7 +276,7 @@ public class IndexerInvertedCompressedTest {
     
     @Test
     public void testMakeIndex() {
-        indexer.makeIndex(doc1, 1);
+        assertThat(indexer.makeIndex(doc1, 1), is(14));
         assertThat(indexer._dictionary.size(), is(13));
         
         ArrayList<Integer> expectedSkipPoint = 
@@ -286,7 +287,7 @@ public class IndexerInvertedCompressedTest {
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
-        indexer.makeIndex(doc2, 2);
+        assertThat(indexer.makeIndex(doc2, 2), is(20));
         assertThat(indexer._dictionary.size(), is(28));
         
         expectedSkipPoint.add(2); expectedSkipPoint.add(7);
@@ -295,7 +296,7 @@ public class IndexerInvertedCompressedTest {
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
-        indexer.makeIndex(doc10, 10);
+        assertThat(indexer.makeIndex(doc10, 10), is(20));
         assertThat(indexer._dictionary.size(), is(39));
       
         expectedSkipPoint.add(10);expectedSkipPoint.add(10);  

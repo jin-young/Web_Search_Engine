@@ -29,25 +29,37 @@ public abstract class IndexerCommon extends Indexer {
     protected SnowballStemmer _stemmer = new englishStemmer();
 
     // Stores all Document in memory
-    protected Vector<Document> _documents = new Vector<Document>();
+    protected Map<String, Document> _documents = new HashMap<String, Document>();
 
     // Maps each term to their integer representation
     protected Map<String, Integer> _dictionary = new TreeMap<String, Integer>();
 
     protected Map<Integer, Integer> _cachedIndex = new HashMap<Integer, Integer>();
 
+    protected Map<Integer, Document> pageRanks = null;
+    protected Map<Integer, Document> numViews = null;
+    
     // Provided for serialization
     public IndexerCommon() {
     }
 
     // The real constructor
+    @SuppressWarnings("unchecked")
     public IndexerCommon(Options options) {
         super(options);
+        
+        // load mining data
+        try {
+            pageRanks = (Map<Integer, Document>)new CorpusAnalyzerPagerank(options).load();
+            numViews = (Map<Integer, Document>)new LogMinerNumviews(options).load();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during load page rank / num view info");
+        }
     }
 
     @Override
     public void constructIndex() throws IOException {
-
         // Get All Files list in the Corpus Folder (data/wiki)
         File folder = new File(_options._corpusPrefix);
         File[] listOfFiles = folder.listFiles();
@@ -142,7 +154,11 @@ public abstract class IndexerCommon extends Indexer {
         doc.setTitle(file.getName());
         doc.setUrl(_options._corpusPrefix + "/" + file.getName());
         doc.setTokenSize(tokenSize);
-        _documents.add(doc);
+        
+        doc.setNumViews(numViews.get(doc.getTitle()).getNumViews());
+        doc.setPageRank(numViews.get(doc.getTitle()).getPageRank());
+        
+        _documents.put(file.getName(), doc);
         ++_numDocs;        
     }
 

@@ -34,7 +34,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	private HashMap<String, HashMap<Integer, ArrayList<Integer>>> _phraseDocMap = new HashMap<String, HashMap<Integer, ArrayList<Integer>>>();
 	
 	// Back-up variables for serializable file write.
-	protected Vector<Document> t_documents;
+	protected Map<String, Document> t_documents;
 	protected Map<String, Integer> t_dictionary;
 	protected int t_numDocs;
 	protected long t_totalTermFrequency;
@@ -482,7 +482,7 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
 	public int documentTermFrequency(String term, String url) {
 		// Get Document ID relating this url
 	    int docid = 0;
-		for (Document doc : _documents) {
+		for (Document doc : _documents.values()) {
 			if (doc.getUrl().equals(url))
 				docid = doc._docid;
 		}

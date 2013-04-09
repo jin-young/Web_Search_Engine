@@ -29,14 +29,14 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected SkipPointer t_skip;
 
     // Back-up variables for serializable file write.
-    protected Vector<Document> t_documents;
+    protected Map<String, Document> t_documents;
     protected Map<String, Integer> t_dictionary;
     protected int t_numDocs;
     protected long t_totalTermFrequency;
 
     protected boolean underTest = false;
     protected Map<Integer, Integer[]> lastProcessedDocInfo;
-
+    
     public IndexerInvertedCompressed(Options options) {
         super(options);
         _index = new CompressedIndex();
@@ -125,11 +125,11 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
-        ObjectInputStream reader = createObjInStream(getIndexerFileName("/dictionary.idx"));
+        ObjectInputStream reader = createObjInStream(getIndexerFileName("/indexer.idx"));
         IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
 
         if (!underTest)
-            System.out.println("Load Indexer from: " + getIndexerFileName("/dictionary.idx"));
+            System.out.println("Load Indexer from: " + getIndexerFileName("/indexer.idx"));
 
         this._documents = loaded.t_documents;
         this._dictionary = loaded.t_dictionary;
@@ -180,7 +180,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     @Override
     public int documentTermFrequency(String term, String url) {
         int docid = 0;
-        for (Document doc : _documents) {
+        for (Document doc : _documents.values()) {
             if (doc.getUrl().equals(url))
                 docid = doc._docid;
         }
@@ -213,7 +213,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     @Override
     public void writeIndexerToFile() throws IOException {
-        String dicFile = _options._indexPrefix + "/dictionary.idx";
+        String dicFile = _options._indexPrefix + "/indexer.idx";
         ObjectOutputStream writer = createObjOutStream(dicFile);
 
         // back-up variables from Indexer class
@@ -221,8 +221,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         t_dictionary = _dictionary;
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
-        //t_skip = _skipPointer;
 
+        //below is not necessary. save space and time!!
+        lastProcessedDocInfo.clear();
+        
         writer.writeObject(this);
         writer.close();
     }
@@ -391,16 +393,19 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     public int makeIndex(String content, int docId) {
         Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content);
-
+        
+        int numOfTokens = 0;
         for (int wordId : wordsPositionsInDoc.keySet()) {
             initIndex(wordId);
             initSkipPointer(wordId);
+            
+            numOfTokens += wordsPositionsInDoc.get(wordId).size();
 
             int offset = addPositionsToIndex(wordsPositionsInDoc.get(wordId), docId, wordId);
             addSkipInfo(wordId, docId, offset);
             
         }
-        return 0;
+        return numOfTokens;
     }
 
     @Override
