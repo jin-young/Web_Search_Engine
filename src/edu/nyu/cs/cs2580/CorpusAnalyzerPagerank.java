@@ -1,7 +1,13 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +50,6 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         System.out.println("Preparing " + this.getClass().getName());
 
         File folder = new File(_options._corpusPrefix);
-        //Map<String, Document> corpus = new HashMap<String, Document>();
 
         int docId = 0;
         for (File f : folder.listFiles()) {
@@ -78,7 +83,20 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
      */
     @Override
     public void compute() throws IOException {
+        Map<String, Float> pageRank = new HashMap<String, Float>();
+        
         System.out.println("Computing using " + this.getClass().getName());
+        System.out.println("Write documents info ");
+        
+        for(String name : documents.keySet()) {
+            pageRank.put(name, documents.get(name).getPageRank());
+        }
+        String filePath = _options._indexPrefix + "/pageRank.dat";
+        ObjectOutputStream writer = 
+                new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath)));
+        writer.writeObject(pageRank);
+        writer.close();
+        writer = null;
         
         return;
     }
@@ -89,10 +107,26 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
      * 
      * @throws IOException
      */
+    @SuppressWarnings("unchecked")
     @Override
     public Object load() throws IOException {
         System.out.println("Loading using " + this.getClass().getName());
-        return null;
+        String filePath = _options._indexPrefix + "/pageRank.dat";
+        
+        ObjectInputStream reader = 
+                new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath)));
+        Map<String, Float> pageRank = null;
+        
+        try {
+            pageRank = (Map<String, Float>)reader.readObject();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during reading page rank data");
+        } finally {
+            reader.close();
+        }
+        
+        return pageRank;
     }
 
     protected String[] getAchors(String fileName) {

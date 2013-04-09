@@ -1,5 +1,7 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,13 +13,6 @@ import java.io.ObjectOutputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
-import java.util.Vector;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Attribute;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -25,8 +20,6 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW3.
  */
 public class LogMinerNumviews extends LogMiner {
-
-	static Map<String, Integer> _numview = new TreeMap<String, Integer>();
 
 	public LogMinerNumviews(Options options) {
 		super(options);
@@ -45,14 +38,14 @@ public class LogMinerNumviews extends LogMiner {
 	 * 
 	 * @throws IOException
 	 */
-	@Override
+    @Override
 	public void compute() throws IOException {
 		System.out.println("Computing using " + this.getClass().getName());
 
-		String path = _options._logPrefix;
-		// Get All Files list in the Corpus Folder (data/wiki)
 		File folder = new File(_options._corpusPrefix);
 		File[] listOfFiles = folder.listFiles();
+		
+		Map<String, Integer> _numview = new HashMap<String, Integer>();
 
 		for (File file : listOfFiles) {
 			if (file.isFile()) {
@@ -60,6 +53,7 @@ public class LogMinerNumviews extends LogMiner {
 			}
 		}
 		
+		String path = _options._logPrefix + "/20130301-160000.log";
 		BufferedReader read = new BufferedReader(new FileReader(path));
 		String line;
 
@@ -106,9 +100,9 @@ public class LogMinerNumviews extends LogMiner {
 		}
 		read.close();
 		
-		String dicFile = "data/numview";
-		ObjectOutputStream writer = new ObjectOutputStream(
-				new FileOutputStream(dicFile));
+		String dicFile = _options._indexPrefix + "/numView.dat";
+		ObjectOutputStream writer = 
+                new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(dicFile)));
 		writer.writeObject(_numview);
 		writer.close();
 		
@@ -121,20 +115,26 @@ public class LogMinerNumviews extends LogMiner {
 	 * 
 	 * @throws IOException
 	 */
-	@Override
+	@SuppressWarnings("unchecked")
+    @Override
 	public Object load() throws IOException {
 		System.out.println("Loading using " + this.getClass().getName());
-		 FileInputStream fis = new FileInputStream("data/numview");
-	        ObjectInputStream reader = new ObjectInputStream(fis);
-	        Map<String, Integer> new_numview=null;
-			try {
-				new_numview = (Map<String, Integer>) reader.readObject();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-	        reader.close();
-		return new_numview;
+		String filePath = _options._indexPrefix + "/numView.dat";
+		
+		ObjectInputStream reader = 
+		        new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath)));
+		Map<String, Integer> numviews = null;
+		
+		try {
+		    numviews = (Map<String, Integer>)reader.readObject();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during reading numview data");
+        } finally {
+            reader.close();
+        }
+		
+		return numviews;
 	}
 
 }
