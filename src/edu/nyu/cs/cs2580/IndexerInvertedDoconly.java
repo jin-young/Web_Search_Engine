@@ -25,7 +25,7 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	private static final long serialVersionUID = 1077111905740085031L;
 
 	// Back-up variables for serializable file write.
-	protected Vector<Document> t_documents;
+	protected Map<String, Document> t_documents;
 	protected Map<String, Integer> t_dictionary;
 	protected int t_numDocs;
 	protected long t_totalTermFrequency;
