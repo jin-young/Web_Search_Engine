@@ -91,6 +91,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             }
         }
         
+        _phraseDocMap.put(phrase, found);
+        
         return found;
     }
  
