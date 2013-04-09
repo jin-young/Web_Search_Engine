@@ -1,7 +1,6 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -35,6 +34,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     protected boolean underTest = false;
     protected Map<Integer, Integer[]> lastProcessedDocInfo;
+    
+    private SkipPointer[] _loadedSkipPointer;
+    private int[] _skipPointerIdxs;
+    private CompressedIndex[] _loadedIndex;
+    private int[] _indexIdxs;
+    private int cacheSize = 5;
     
     public IndexerInvertedCompressed(Options options) {
         super(options);
@@ -100,69 +105,32 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         return docList;
     }
 
-    private ArrayList<Short> getDocArray(int idx) throws IOException, ClassNotFoundException {
-
-        if (_index.containsKey(idx))
-            return _index.get(idx);
-
-        int pageNum = idx % MAXCORPUS;
-
-        // Read corpus file
-        String indexFile = _options._indexPrefix + "/index_" + pageNum + ".idx";
-        ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
-        CompressedIndex _tmpIndex = (CompressedIndex) reader.readObject();
-        reader.close();
-
-        if (!_tmpIndex.containsKey(idx))
-            return new ArrayList<Short>();
-        else {
-            ArrayList<Short> docMap = _tmpIndex.get(idx);
-            _index.put(idx, docMap);
-            return docMap;
-        }
-    }
-
-    @Override
-    public void loadIndex() throws IOException, ClassNotFoundException {
-        ObjectInputStream reader = createObjInStream(getIndexerFileName());
-        IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
-
-        if (!underTest)
-            System.out.println("Load Indexer from: " + getIndexerFileName());
-
-        this._documents = loaded.t_documents;
-        this._dictionary = loaded.t_dictionary;
-        this._numDocs = loaded.t_numDocs;
-        this._totalTermFrequency = loaded.t_totalTermFrequency;
-
-        reader.close();
-
-        if (!underTest) {
-            System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
-                    + Long.toString(_totalTermFrequency) + " terms!");
-        }
-    }
-
-    protected String getIndexerFileName() {
-        return _options._indexPrefix + "/indexer.idx";
-    }
-
+    /**
+     * Corpus Doc Frequency By Term
+     * @param : String term
+     * @return : total # of documents with term
+     **/
     @Override
     public int corpusDocFrequencyByTerm(String term) {
-        return _dictionary.containsKey(term) ? (_skipPointer.get(_dictionary.get(term)).size() / 2) : 0;
+        if(term.contains(" ")){ // Phrase
+            //docMap = getPhraseDocMap(term);
+            //return docMap.size();
+            return 0;
+        }else{ // Word
+            return _dictionary.containsKey(term) ? (getSkipInfo(term).size() / 2) : 0;
+        }
     }
 
+    /**
+     * Corpus Term Frequency
+     * @param : String term
+     * @return : total # of term appearance in corpus
+     **/
     @Override
     public int corpusTermFrequency(String term) {
         int wordId = _dictionary.get(term);
         ArrayList<Short> list = null;
-        try {
-            list = getDocArray(wordId);
-        } catch (IOException ie) {
-            System.err.println(ie.getMessage());
-        } catch (ClassNotFoundException ce) {
-            System.err.println(ce.getMessage());
-        }
+        list = getDocArray(wordId);
 
         ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
 
@@ -189,13 +157,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         int wordId = _dictionary.get(term);
 
         ArrayList<Short> list = null;
-        try {
-            list = getDocArray(wordId);
-        } catch (IOException ie) {
-            System.err.println(ie.getMessage());
-        } catch (ClassNotFoundException ce) {
-            System.err.println(ce.getMessage());
-        }
+        list = getDocArray(wordId);
+        
         int i = 0;
         ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
         for (; i < skipInfo.size(); i = i + 2) {
@@ -208,20 +171,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             return 0; // we could not find given doc
 
         return ByteAlignUtil.decodeVbyte(ByteAlignUtil.nextPosition(i, list), list);
-    }
-
-    @Override
-    public void writeIndexerToFile() throws IOException {
-        ObjectOutputStream writer = createObjOutStream(getIndexerFileName());
-
-        // back-up variables from Indexer class
-        t_documents = _documents;
-        t_dictionary = _dictionary;
-        t_numDocs = _numDocs;
-        t_totalTermFrequency = _totalTermFrequency;
-
-        writer.writeObject(this);
-        writer.close();
     }
 
     @Override
@@ -241,10 +190,103 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
          * posList.get(0); return nextPhrase(query, docid, posList.get(1));
          */
     }
+    
+    // ///////////////////////////////////////////////////////////////////////////////////////
+    // //////////////// MAYBE CONVERTED WELL
+    // ///////////////////////////////////////////////////////////////////////////////////////
+    
+    @Override
+    public void writeIndexerToFile() throws IOException {
+        ObjectOutputStream writer = createObjOutStream(getIndexerFileName());
+
+        // back-up variables from Indexer class
+        t_documents = _documents;
+        t_dictionary = _dictionary;
+        t_numDocs = _numDocs;
+        t_totalTermFrequency = _totalTermFrequency;
+
+        writer.writeObject(this);
+        writer.close();
+    }
+    
+    protected ArrayList<Integer> getSkipInfo(String term) {
+        int wordId = _dictionary.get(term);
+        
+        int corpusId = wordId % MAXCORPUS;
+        int cacheId = corpusId % cacheSize;
+
+        if(_skipPointerIdxs[cacheId] != -1) {
+            if(_skipPointerIdxs[cacheId] == corpusId) {
+                System.out.println("CACHE HIT: Use skip pointer #" + corpusId);
+            } else {
+                System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
+                _loadedSkipPointer[cacheId] = loadSkipPointer(corpusId);
+            }
+        } else {
+            System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
+            _loadedSkipPointer[cacheId] = loadSkipPointer(corpusId);
+        }
+
+        _skipPointerIdxs[cacheId] = corpusId;
+        
+        return _loadedSkipPointer[cacheId].get(wordId);
+    }
+    
+    private ArrayList<Short> getDocArray(int wordId) {
+        int corpusId = wordId % MAXCORPUS;
+        int cacheId = corpusId % cacheSize;
+        
+        if(_indexIdxs[cacheId] != -1) {
+            if(_indexIdxs[cacheId] == corpusId) {
+                System.out.println("CACHE HIT: Use compressed index #" + corpusId);
+            } else {
+                System.out.println("CACHE MISS: compressed index #" + corpusId);
+                _loadedIndex[cacheId] = loadIndex(corpusId);
+            }
+        } else {
+            System.out.println("CACHE MISS: Load compressed index #" + corpusId);
+            _loadedIndex[cacheId] = loadIndex(corpusId);
+        }
+
+        _indexIdxs[cacheId] = corpusId;
+        
+        return _loadedIndex[cacheId].get(wordId);
+    }
+
+    @Override
+    public void loadIndex() throws IOException, ClassNotFoundException {
+        ObjectInputStream reader = createObjInStream(getIndexerFileName());
+        IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
+
+        if (!underTest)
+            System.out.println("Load Indexer from: " + getIndexerFileName());
+
+        this._documents = loaded.t_documents;
+        this._dictionary = loaded.t_dictionary;
+        this._numDocs = loaded.t_numDocs;
+        this._totalTermFrequency = loaded.t_totalTermFrequency;
+
+        reader.close();
+
+        if (!underTest) {
+            System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
+                    + Long.toString(_totalTermFrequency) + " terms!");
+        }
+        
+        // CACHE for improve performance
+        _loadedSkipPointer = new SkipPointer[cacheSize];
+        _loadedIndex = new CompressedIndex[cacheSize];
+        _skipPointerIdxs = new int[cacheSize];
+        _indexIdxs = new int[cacheSize];
+        
+        for(int i=0; i<cacheSize; i++) {
+            _skipPointerIdxs[i] = -1;
+            _indexIdxs[i] = -1;
+        }
+    }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
     // //////////////// TEST DONE OR NOT NEED TO BE TESTED
-    // //////////////////////////////////
     // ///////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -614,6 +656,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected String getPartialSkipPointerName(int idx) {
         String indexPrefix = _options._indexPrefix + "/skip_";
         return indexPrefix + String.format("%02d", idx) + ".idx";
+    }
+
+    protected String getIndexerFileName() {
+        return _options._indexPrefix + "/indexer.idx";
     }
 
     public SkipPointer getSkipPointer() {
