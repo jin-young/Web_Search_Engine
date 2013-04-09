@@ -45,11 +45,15 @@ public class LogMinerNumviews extends LogMiner {
 		File folder = new File(_options._corpusPrefix);
 		File[] listOfFiles = folder.listFiles();
 		
-		Map<String, Integer> _numview = new HashMap<String, Integer>();
+		Map<String, Document> _numview = new HashMap<String, Document>();
 
+		int docId = 0;
 		for (File file : listOfFiles) {
 			if (file.isFile()) {
-				_numview.put(file.getName(), 0);
+				 Document d = new Document(docId++);
+	                d.setTitle(file.getName());
+	                d.setNumViews(0);
+	                _numview.put(file.getName(), d);
 			}
 		}
 		
@@ -88,8 +92,8 @@ public class LogMinerNumviews extends LogMiner {
                     		 numview="0";
                     	
                     	int numviewInt = Integer.parseInt(numview);
-                    	
-                    	 _numview.put(temp, numviewInt);
+               
+                    	 _numview.get(temp).setNumViews(numviewInt);
                     }
                 } catch(Exception e){
                     System.err.println(e.getMessage());
@@ -123,10 +127,10 @@ public class LogMinerNumviews extends LogMiner {
 		
 		ObjectInputStream reader = 
 		        new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath)));
-		Map<String, Integer> numviews = null;
+		Map<String, Document> numviews = null;
 		
 		try {
-		    numviews = (Map<String, Integer>)reader.readObject();
+		    numviews = (Map<String, Document>)reader.readObject();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             throw new RuntimeException("Error during reading numview data");
