@@ -83,18 +83,18 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
      */
     @Override
     public void compute() throws IOException {
-        Map<String, Float> pageRank = new HashMap<String, Float>();
+        //Map<String, Float> pageRank = new HashMap<String, Float>();
         
         System.out.println("Computing using " + this.getClass().getName());
         System.out.println("Write documents info ");
         
-        for(String name : documents.keySet()) {
-            pageRank.put(name, documents.get(name).getPageRank());
-        }
+        //for(String name : documents.keySet()) {
+        //    pageRank.put(name, documents.get(name).getPageRank());
+        //}
         String filePath = _options._indexPrefix + "/pageRank.dat";
         ObjectOutputStream writer = 
                 new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath)));
-        writer.writeObject(pageRank);
+        writer.writeObject(documents);
         writer.close();
         writer = null;
         
@@ -115,10 +115,10 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         
         ObjectInputStream reader = 
                 new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath)));
-        Map<String, Float> pageRank = null;
+        Map<String, Document> pageRank = null;
         
         try {
-            pageRank = (Map<String, Float>)reader.readObject();
+            pageRank = (Map<String, Document>)reader.readObject();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             throw new RuntimeException("Error during reading page rank data");
