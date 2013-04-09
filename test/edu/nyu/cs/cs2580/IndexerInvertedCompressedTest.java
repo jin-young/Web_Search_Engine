@@ -283,7 +283,7 @@ public class IndexerInvertedCompressedTest {
                 new ArrayList<Integer>(Arrays.asList(new Integer[]{1,4}));
                 
         //this posting should be (1, 2, [3, 11])
-        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
@@ -292,7 +292,7 @@ public class IndexerInvertedCompressedTest {
         
         expectedSkipPoint.add(2); expectedSkipPoint.add(7);
         //this posting should be (1, 2, [3, 11]), (1, 1, [19])
-        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
@@ -301,7 +301,7 @@ public class IndexerInvertedCompressedTest {
       
         expectedSkipPoint.add(10);expectedSkipPoint.add(10);  
         //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
-        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
     }
@@ -334,7 +334,7 @@ public class IndexerInvertedCompressedTest {
         SkipPointer skip = indexer.loadSkipPointer(3, 1);
         
         ArrayList<Short> posting = tempIndex.get(3);
-        assertThat(posting2IntArray(posting), is(new int[]{1, 2, 3, 11}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{1, 2, 3, 11}));
         
         ArrayList<Integer> skipInfo = skip.get(3);
         assertThat(skipInfo, is(new ArrayList<Integer>(
@@ -348,7 +348,7 @@ public class IndexerInvertedCompressedTest {
         skip = indexer.loadSkipPointer(3, 2);
         
         posting = tempIndex.get(3);
-        assertThat(posting2IntArray(posting), is(new int[]{1, 1, 19}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{1, 1, 19}));
 
         skipInfo = skip.get(3);
         assertThat(skipInfo, is(new ArrayList<Integer>(
@@ -362,7 +362,7 @@ public class IndexerInvertedCompressedTest {
         skip = indexer.loadSkipPointer(3, 3);
         
         posting = tempIndex.get(3);
-        assertThat(posting2IntArray(posting), is(new int[]{8, 1, 20}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{8, 1, 20}));
         
         skipInfo = skip.get(3);
         assertThat(skipInfo, is(new ArrayList<Integer>(
@@ -370,7 +370,7 @@ public class IndexerInvertedCompressedTest {
         )));
         
         posting = tempIndex.get(33);
-        assertThat(posting2IntArray(posting), is(new int[]{10, 1, 8}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{10, 1, 8}));
         
         deleteDirectory(testDir);
     }
@@ -404,10 +404,10 @@ public class IndexerInvertedCompressedTest {
         assertThat(index3.size(), is(2));
         
         ArrayList<Short> posting = index3.get(3);
-        assertThat(posting2IntArray(posting), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
         
         posting = index3.get(33);
-        assertThat(posting2IntArray(posting), is(new int[]{10, 1, 8}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{10, 1, 8}));
         
         SkipPointer skip3 = indexer.loadSkipPointer(3);
         ArrayList<Integer> skipInfo = skip3.get(3);
@@ -419,7 +419,7 @@ public class IndexerInvertedCompressedTest {
         CompressedIndex index18 = indexer.loadIndex(18);
         assertThat(index18.size(), is(1));
         posting = index18.get(18);
-        assertThat(posting2IntArray(posting), is(new int[]{2, 1, 5, 8, 1, 2}));
+        assertThat(ByteAlignUtil.byteArr2IntArr(posting), is(new int[]{2, 1, 5, 8, 1, 2}));
         
         SkipPointer skip18 = indexer.loadSkipPointer(18);
         skipInfo = skip18.get(18);
@@ -432,21 +432,6 @@ public class IndexerInvertedCompressedTest {
         }
     }
     
-    private int[] posting2IntArray(ArrayList<Short> posting) {
-        ArrayList<Integer> temp = new ArrayList<Integer>();
-        for(int i=0; i<posting.size();) {
-            temp.add(ByteAlignUtil.decodeVbyte(i, posting));
-            i = ByteAlignUtil.nextPosition(i, posting);
-        }
-        
-        int[] result = new int[temp.size()];
-        for(int i=0; i<temp.size();i++) {
-            result[i] = temp.get(i);
-        }
-        
-        return result;
-    }
-
     private boolean deleteDirectory(File directory) {
         if(directory.exists()){
             File[] files = directory.listFiles();

@@ -72,4 +72,45 @@ public class ByteAlignUtil {
 
         return length;
     }    
+    
+    public static ArrayList<Integer> byteArr2IntList(ArrayList<Short> posting) {
+        ArrayList<Integer> temp = new ArrayList<Integer>();
+        for(int i=0; i<posting.size();) {
+            temp.add(decodeVbyte(i, posting));
+            i = nextPosition(i, posting);
+        }
+        
+        return temp;
+    }
+    
+    public static int[] byteArr2IntArr(ArrayList<Short> posting) {
+        ArrayList<Integer> temp = byteArr2IntList(posting);
+        
+        int[] result = new int[temp.size()];
+        for(int i=0; i<temp.size();i++) {
+            result[i] = temp.get(i);
+        }
+        
+        return result;
+    }
+
+    public static ArrayList<Integer> getPosting(int position, ArrayList<Short> postingList) {
+        ArrayList<Integer> temp = new ArrayList<Integer>();
+        
+        if(position < postingList.size()) {
+            //add doc id
+            temp.add(decodeVbyte(position, postingList));
+    
+            int numOfAppear = howManyAppeared(position, postingList);
+            temp.add(numOfAppear);
+            
+            position = nextPosition(nextPosition(position, postingList), postingList);
+            for(int i=0; i<numOfAppear; i++) {
+                temp.add(decodeVbyte(position, postingList));
+                position = nextPosition(position, postingList);
+            }
+        }
+        
+        return temp;
+    }    
 }

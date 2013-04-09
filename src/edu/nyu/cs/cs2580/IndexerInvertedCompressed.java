@@ -41,26 +41,22 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     private int[] _indexIdxs;
     private int cacheSize = 5;
     
+    private Map<Integer, Document> _documentsById = null;
+    
     public IndexerInvertedCompressed(Options options) {
         super(options);
         _index = new CompressedIndex();
         _skipPointer = new SkipPointer();
         lastProcessedDocInfo = new HashMap<Integer, Integer[]>();
 
-        DIV = 500;
-
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
-
-    @Override
-    public Document getDoc(int docid) {
-        return _documents.get(docid);
-    }
-
+    int count = 0;
     @Override
     public Document nextDoc(Query query, int docid) {
         Vector<Integer> docs = new Vector<Integer>();
         int doc = -1;
+System.out.println("ND : " + count++);
 
         // find next document for each query
         for (int i = 0; i < query._tokens.size(); i++) {
@@ -85,40 +81,16 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
         // found!
         if (equal(docs))
-            return _documents.get(docs.get(0));
+            return _documentsById.get(docs.get(0));
 
         // search next
         return nextDoc(query, Max(docs) - 1);
     }
 
-    protected Vector<Integer> retriveDocList(String word) {
-        int idx = _dictionary.get(word);
-        Vector<Integer> docList = new Vector<Integer>();
-
-        for (int i = 0; i < _skipPointer.get(idx).size(); i = i + 2) {
-            docList.add(_skipPointer.get(idx).get(i));
-        }
-
-        // Sort the doc list
-        Collections.sort(docList);
-
-        return docList;
-    }
-
-    /**
-     * Corpus Doc Frequency By Term
-     * @param : String term
-     * @return : total # of documents with term
-     **/
-    @Override
-    public int corpusDocFrequencyByTerm(String term) {
-        if(term.contains(" ")){ // Phrase
-            //docMap = getPhraseDocMap(term);
-            //return docMap.size();
-            return 0;
-        }else{ // Word
-            return _dictionary.containsKey(term) ? (getSkipInfo(term).size() / 2) : 0;
-        }
+    protected ArrayList<Integer> gerPhraseDocArray(String term) {
+        String[] words = term.split("\\s+");
+        //ArrayList<Integer> candiates = getDocArray(words[0]);
+        return null;
     }
 
     /**
@@ -128,51 +100,74 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
      **/
     @Override
     public int corpusTermFrequency(String term) {
-        int wordId = _dictionary.get(term);
-        ArrayList<Short> list = null;
-        list = getDocArray(wordId);
-
-        ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-
-        int frequency = 0;
-        int startPoint = 0;
-        for (int i = 0; i < skipInfo.size(); i = i + 2) {
-            frequency += ByteAlignUtil.decodeVbyte(ByteAlignUtil.nextPosition(startPoint, list), list);
-            startPoint = skipInfo.get(i + 1);
+        if(_dictionary.get(term) == null)
+            return 0;
+        
+        if(term.contains(" ")) {
+            return 0;
+        } else {
+            int wordId = _dictionary.get(term);
+            ArrayList<Short> list = null;
+            list = getDocArray(wordId);
+    
+            ArrayList<Integer> skipInfo = getSkipInfo(wordId);
+    
+            int frequency = 0;
+            int startPoint = 0;
+            for (int i = 0; i < skipInfo.size(); i = i + 2) {
+                frequency += ByteAlignUtil.howManyAppeared(startPoint, list);
+                startPoint = skipInfo.get(i + 1);
+            }
+    
+            return frequency;
         }
-
-        return frequency;
     }
 
+    /**
+     * Document Term Frequency
+     * @param : String term, String url
+     * @return : total # of term appearance in a document
+     **/
     @Override
     public int documentTermFrequency(String term, String url) {
         int docid = 0;
         for (Document doc : _documents.values()) {
-            if (doc.getUrl().equals(url))
+            if (doc.getUrl().equals(url)) {
                 docid = doc._docid;
-        }
-        if (docid == 0)
-            return 0; // we could not find given doc
-
-        int wordId = _dictionary.get(term);
-
-        ArrayList<Short> list = null;
-        list = getDocArray(wordId);
-        
-        int i = 0;
-        ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-        for (; i < skipInfo.size(); i = i + 2) {
-            if (skipInfo.get(i) == docid) {
                 break;
             }
         }
-
-        if (i > skipInfo.size())
-            return 0; // we could not find given doc
-
-        return ByteAlignUtil.decodeVbyte(ByteAlignUtil.nextPosition(i, list), list);
+        
+        if (docid == 0)
+            return 0; // we could not find given doc        
+        
+        if(term.contains(" ")) {
+            // Phrase
+            ArrayList<Integer> result = gerPhraseDocArray(term);
+            if(result == null || result.isEmpty()) {
+                return 0;
+            } else {
+                if(result.contains(docid)) {
+                    
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+        } else {
+         // Single Word
+            int wordId = _dictionary.get(term);
+            ArrayList<Integer> posting = retrivePosting(wordId, docid);
+            
+            if(posting == null || posting.isEmpty())
+                return 0;
+            else {
+                //second element of posting is number of occurrence
+                return posting.get(1).intValue(); 
+            }
+        }
     }
-
+    
     @Override
     public int nextPhrase(String phrase, int docid) {
 
@@ -195,6 +190,67 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     // //////////////// MAYBE CONVERTED WELL
     // ///////////////////////////////////////////////////////////////////////////////////////
     
+    protected Vector<Integer> retriveDocList(String word) {
+        int idx = _dictionary.get(word);
+        Vector<Integer> docList = new Vector<Integer>();
+
+        for (int i = 0; i < getSkipInfo(idx).size(); i = i + 2) {
+            docList.add(getSkipInfo(idx).get(i));
+        }
+
+        // Sort the doc list
+        Collections.sort(docList);
+
+        return docList;
+    }
+    
+    protected ArrayList<Integer> retrivePosting(int wordId, int docId) {
+        ArrayList<Integer> skipInfo = getSkipInfo(wordId);
+        if(skipInfo == null || skipInfo.isEmpty()) {
+            return null;
+        } else {
+            int i = 0;
+            for (; i < skipInfo.size(); i = i + 2) {
+                if (skipInfo.get(i) == docId) {
+                    break;
+                }
+            }
+            
+            if (i > skipInfo.size())
+                return null; // we could not find given doc
+            
+            int startPosition = skipInfo.get(i + 1);
+            
+            ArrayList<Short> postingList = getDocArray(wordId);
+            return ByteAlignUtil.getPosting(startPosition, postingList);
+        }
+    }
+    
+    /**
+     * Corpus Doc Frequency By Term
+     * @param : String term
+     * @return : total # of documents with term
+     **/
+    @Override
+    public int corpusDocFrequencyByTerm(String term) {
+        if(term.contains(" ")){ 
+            // Phrase
+            ArrayList<Integer> found = gerPhraseDocArray(term);
+            if(found == null)
+                return 0;
+            else
+                return found.size();
+        }else{ 
+            // Single Word
+            return _dictionary.containsKey(term) ? (getSkipInfo(term).size() / 2) : 0;
+        }
+    }
+    
+    @Override
+    public Document getDoc(int docid) {
+        return _documents.get(docid);
+    }
+    
     @Override
     public void writeIndexerToFile() throws IOException {
         ObjectOutputStream writer = createObjOutStream(getIndexerFileName());
@@ -210,20 +266,25 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     }
     
     protected ArrayList<Integer> getSkipInfo(String term) {
-        int wordId = _dictionary.get(term);
-        
+        if(_dictionary.containsKey(term)) 
+            return getSkipInfo(_dictionary.get(term));
+        else
+            return null;
+    }
+    
+    protected ArrayList<Integer> getSkipInfo(int wordId) {
         int corpusId = wordId % MAXCORPUS;
         int cacheId = corpusId % cacheSize;
 
         if(_skipPointerIdxs[cacheId] != -1) {
             if(_skipPointerIdxs[cacheId] == corpusId) {
-                System.out.println("CACHE HIT: Use skip pointer #" + corpusId);
+                //System.out.println("CACHE HIT: Use skip pointer #" + corpusId);
             } else {
-                System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
+                //System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
                 _loadedSkipPointer[cacheId] = loadSkipPointer(corpusId);
             }
         } else {
-            System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
+            //System.out.println("CACHE MISS: Load skip pointer #" + corpusId);
             _loadedSkipPointer[cacheId] = loadSkipPointer(corpusId);
         }
 
@@ -232,19 +293,26 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         return _loadedSkipPointer[cacheId].get(wordId);
     }
     
+    protected ArrayList<Short> getDocArray(String term) {
+        if(_dictionary.containsKey(term)) 
+            return getDocArray(_dictionary.get(term));
+        else
+            return null;
+    }    
+    
     private ArrayList<Short> getDocArray(int wordId) {
         int corpusId = wordId % MAXCORPUS;
         int cacheId = corpusId % cacheSize;
         
         if(_indexIdxs[cacheId] != -1) {
             if(_indexIdxs[cacheId] == corpusId) {
-                System.out.println("CACHE HIT: Use compressed index #" + corpusId);
+                //System.out.println("CACHE HIT: Use compressed index #" + corpusId);
             } else {
-                System.out.println("CACHE MISS: compressed index #" + corpusId);
+                //System.out.println("CACHE MISS: compressed index #" + corpusId);
                 _loadedIndex[cacheId] = loadIndex(corpusId);
             }
         } else {
-            System.out.println("CACHE MISS: Load compressed index #" + corpusId);
+            //System.out.println("CACHE MISS: Load compressed index #" + corpusId);
             _loadedIndex[cacheId] = loadIndex(corpusId);
         }
 
@@ -257,21 +325,22 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     public void loadIndex() throws IOException, ClassNotFoundException {
         ObjectInputStream reader = createObjInStream(getIndexerFileName());
         IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
-
-        if (!underTest)
-            System.out.println("Load Indexer from: " + getIndexerFileName());
+        reader.close();
+        System.out.println("Load Indexer from: " + getIndexerFileName());
 
         this._documents = loaded.t_documents;
         this._dictionary = loaded.t_dictionary;
         this._numDocs = loaded.t_numDocs;
         this._totalTermFrequency = loaded.t_totalTermFrequency;
 
-        reader.close();
-
-        if (!underTest) {
-            System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
-                    + Long.toString(_totalTermFrequency) + " terms!");
+        _documentsById = new HashMap<Integer, Document>();
+        
+        for(Document d : _documents.values()) {
+            _documentsById.put(d._docid, d);
         }
+
+        System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
+                + Long.toString(_totalTermFrequency) + " terms!");
         
         // CACHE for improve performance
         _loadedSkipPointer = new SkipPointer[cacheSize];
