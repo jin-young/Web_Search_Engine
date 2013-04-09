@@ -3,11 +3,14 @@ package edu.nyu.cs.cs2580;
 import static org.easymock.EasyMock.createMock;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Before;
@@ -143,6 +146,10 @@ public class IndexerInvertedCompressedTest {
 	
 	@Test
 	public void testAddPositionsToIndex() {
+	    //word id and doc id
+	    Map<Integer, Integer[]> lastProcessedDocId = new HashMap<Integer, Integer[]>();
+	    
+	    indexer.setLastProcessedDocId(lastProcessedDocId);
 	    ArrayList<Integer> positions = new ArrayList<Integer>(
 	            Arrays.asList(new Integer[]{3, 29, 21})
         );
@@ -159,40 +166,37 @@ public class IndexerInvertedCompressedTest {
 	            Arrays.asList(new Short[]{0x01, 0x1C, 0xA0, 0x83, 0x83, 0x9D, 0x95})
         );
 	    assertThat(indexer.getIndex().get(wordId), is(expect));
+	    
+	    //suppose that word id 35's last processed doc id is 27
+	    wordId = 35;
+	    docId = 99;
+	    
+	    lastProcessedDocId.put(wordId, new Integer[]{27, 0});
+        offset = indexer.addPositionsToIndex(positions, docId, wordId);
+        assertThat("Five bytes should be added", offset, is(5));
+        
+        //99-27 = 72 = 0xC8
+        expect = new ArrayList<Short>(
+                Arrays.asList(new Short[]{0xC8, 0x83, 0x83, 0x9D, 0x95})
+        );
+        assertThat("head should be 8 because of delta encoding", indexer.getIndex().get(wordId), is(expect));
 	}
 	
 	@Test
 	public void testLastDocId() {
 	    assertThat("If there is no word, last doc id should be 0", indexer.lastDocId(11), is(0));
 	    
-	    SkipPointer mockList = new SkipPointer();
+	    Map<Integer, Integer[]> mockLastDocIds = new HashMap<Integer, Integer[]>();
+	    indexer.setLastProcessedDocId(mockLastDocIds);
 	    
-	    ArrayList<Integer> word11 = new ArrayList<Integer>();
-	    //doc id, offset
-	    word11.add(3);word11.add(7);
-	    //doc id, offset
-	    word11.add(5);word11.add(11);
-	    mockList.put(11, word11);
-	    
-	    ArrayList<Integer> word5 = new ArrayList<Integer>();
-       //doc id, offset
-	    word5.add(1);word5.add(7);
-        mockList.put(5, word5);
-        
-        ArrayList<Integer> word33 = new ArrayList<Integer>();
-        //doc id, offset
-        word33.add(1);word33.add(7);
-        word33.add(2);word33.add(8);
-        word33.add(4);word33.add(3);
-        word33.add(6);word33.add(10);
-         mockList.put(33, word33);
-        
-	    indexer.setSkipPointer(mockList);
-	    
+	  //we don't care second value because of it is needed when add skip pointer
+	    mockLastDocIds.put(11, new Integer[]{5, 0});
 	    assertThat("Last doc id of word 11 should be 5", indexer.lastDocId(11), is(5));
 	    
 	    assertThat("If there is no word, last doc id should be 0", indexer.lastDocId(12), is(0));
 	    
+	    mockLastDocIds.put(5, new Integer[]{1, 0});
+	    mockLastDocIds.put(33, new Integer[]{6, 0});
 	    assertThat("Last doc id of word 5 should be 1", indexer.lastDocId(5), is(1));
 	    assertThat("Last doc id of word 33 should be 6", indexer.lastDocId(33), is(6));
 	}
@@ -240,24 +244,14 @@ public class IndexerInvertedCompressedTest {
     @Test
     public void testAddSkipInfo() {
         int wordId = 5, docId = 1, length = 2;
-        
         assertThat(indexer.addSkipInfo(wordId, docId, length), is(2));
-        assertThat(indexer.lastDocId(wordId), is(1));
-        assertThat(indexer.lastPosition(wordId), is(2));
-        
         assertThat(indexer.addSkipInfo(wordId, 3, 4), is(6));
-        assertThat(indexer.lastDocId(wordId), is(3));
-        assertThat(indexer.lastPosition(wordId), is(6));
         
         assertThat(indexer.addSkipInfo(11, 2, 4), is(4));
-        assertThat(indexer.lastDocId(wordId), is(3));
         assertThat(indexer.lastPosition(wordId), is(6));
-        
-        assertThat(indexer.lastDocId(11), is(2));
         assertThat(indexer.lastPosition(11), is(4));
         
         assertThat(indexer.addSkipInfo(wordId, 9, 7), is(13));
-        assertThat(indexer.lastDocId(wordId), is(9));
         assertThat(indexer.lastPosition(wordId), is(13));
     }
     
@@ -284,41 +278,29 @@ public class IndexerInvertedCompressedTest {
         indexer.makeIndex(doc1, 1);
         assertThat(indexer._dictionary.size(), is(13));
         
-        ArrayList<Short> posting = indexer.getIndex().get(3);
         ArrayList<Integer> expectedSkipPoint = 
                 new ArrayList<Integer>(Arrays.asList(new Integer[]{1,4}));
                 
         //this posting should be (1, 2, [3, 11])
-        int[] indexV = new int[]{1, 2, 3, 11};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
+        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
         indexer.makeIndex(doc2, 2);
         assertThat(indexer._dictionary.size(), is(28));
         
-        posting = indexer.getIndex().get(3);
         expectedSkipPoint.add(2); expectedSkipPoint.add(7);
         //this posting should be (1, 2, [3, 11]), (1, 1, [19])
-        indexV = new int[]{1, 2, 3, 11, 1, 1, 19};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
+        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
         
         indexer.makeIndex(doc10, 10);
         assertThat(indexer._dictionary.size(), is(39));
       
-        posting = indexer.getIndex().get(3);
         expectedSkipPoint.add(10);expectedSkipPoint.add(10);  
         //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
-        indexV = new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
+        assertThat(posting2IntArray(indexer.getIndex().get(3)), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
         
         assertThat(indexer.getSkipPointer().get(3), is(expectedSkipPoint));
     }
@@ -333,145 +315,137 @@ public class IndexerInvertedCompressedTest {
         testDir.mkdirs();
         
         indexer.makeIndex(doc1, 1);
-        indexer.makeIndex(doc2, 2);
-        indexer.makeIndex(doc10, 10);
-        
         indexer.writeToFile(1);
         
+        indexer.makeIndex(doc2, 2);
+        indexer.writeToFile(2);
+        
+        indexer.makeIndex(doc10, 10);
+        indexer.writeToFile(3);
+        
+        //NOTE: WHOLE POSTING LIST of WORD ID 3 IS:
+        //(1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
+        //WHOLE SKIP POINTERS of WORD ID 3 IS:
+        //(1, 4), (2, 7), (10, 10)
+        
+        //first round 3rd index and its skip pointer
         CompressedIndex tempIndex = indexer.loadIndex(3,1);
         SkipPointer skip = indexer.loadSkipPointer(3, 1);
         
         ArrayList<Short> posting = tempIndex.get(3);
-        //this posting should be (1, 2, [3, 11]), (1, 1, [19]), (8, 1, [20])
-        int[] indexV = new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
+        assertThat(posting2IntArray(posting), is(new int[]{1, 2, 3, 11}));
+        
         ArrayList<Integer> skipInfo = skip.get(3);
         assertThat(skipInfo, is(new ArrayList<Integer>(
-                Arrays.asList(new Integer[]{1, 4, 2, 7, 10, 10})
+                Arrays.asList(new Integer[]{1, 4})
+        )));
+        
+        assertThat("word id 33 should not be stored in first round index", tempIndex.get(33), nullValue());
+        
+        //second round 3rd index and its skip pointer
+        tempIndex = indexer.loadIndex(3,2);
+        skip = indexer.loadSkipPointer(3, 2);
+        
+        posting = tempIndex.get(3);
+        assertThat(posting2IntArray(posting), is(new int[]{1, 1, 19}));
+
+        skipInfo = skip.get(3);
+        assertThat(skipInfo, is(new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{2, 7})
+        )));
+        
+        assertThat("word id 33 should not be stored in second round index", tempIndex.get(33), nullValue());
+        
+        //second round 3rd index and its skip pointer
+        tempIndex = indexer.loadIndex(3,3);
+        skip = indexer.loadSkipPointer(3, 3);
+        
+        posting = tempIndex.get(3);
+        assertThat(posting2IntArray(posting), is(new int[]{8, 1, 20}));
+        
+        skipInfo = skip.get(3);
+        assertThat(skipInfo, is(new ArrayList<Integer>(
+                Arrays.asList(new Integer[]{10, 10})
         )));
         
         posting = tempIndex.get(33);
-        //this posting should be (10, 1, 8)
-        indexV = new int[]{10, 1, 8};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
-        skipInfo = skip.get(33);
-        assertThat(skipInfo, is(new ArrayList<Integer>(
-                Arrays.asList(new Integer[]{10, 3})
-        )));
-        
-        assertThat("word id 4 should be stored in 4th index", tempIndex.get(4), nullValue());
-        
-        tempIndex = indexer.loadIndex(10,1);
-        skip = indexer.loadSkipPointer(10, 1);
-        
-        posting = tempIndex.get(10);
-        //this posting should be (1, 1, [10]), (1, 2, [9, 7])
-        indexV = new int[]{1, 1, 10, 1, 2, 9, 7};
-        for(int i=0; i<indexV.length; i++) {
-            assertThat(ByteAlignUtil.decodeVbyte(i, posting), is(indexV[i]));
-        }
-        skipInfo = skip.get(10);
-        assertThat(skipInfo, is(new ArrayList<Integer>(
-                Arrays.asList(new Integer[]{1, 3, 2, 7})
-        )));
+        assertThat(posting2IntArray(posting), is(new int[]{10, 1, 8}));
         
         deleteDirectory(testDir);
-    }  
-    
-    @Test
-    public void testAdjustPostingHeader() {
-        //adjustPostingHeader(ArrayList<Short> posting, ArrayList<Integer> prevSkipInfo)
-        //same encoded length case
-        ArrayList<Integer> pSkipInfo = new ArrayList<Integer>();
-        //(1, 4) (2, 7) (10, 10)
-        pSkipInfo.add(1); pSkipInfo.add(4);
-        pSkipInfo.add(2); pSkipInfo.add(7);
-        pSkipInfo.add(10); pSkipInfo.add(10);
-        
-        //above means that previous posting might be 
-        //  (1, 2, [?, ?]), (1, 1, [?]), (8, 1, [?]).
-        //there are three doc ids: 1, 2, 10
-        //note: currently we don't care actual value of ?
-        
-        //let second posting be (15, 2, [3, 17]), (2, 1, [5]).
-        //there are two doc ids: 15, 17.
-        
-        ArrayList<Short> posting = new ArrayList<Short>();
-        for(int v : new int[] {15, 2, 3, 17, 2, 1, 5}) {
-            for(short s : ByteAlignUtil.encodeVbyte(v)) {
-                posting.add(s);
-            }
-        }
-        
-        int[] expectedV = new int[] {5, 2, 3, 17, 2, 1, 5};
-        ArrayList<Short> expected = new ArrayList<Short>();
-        for(int v : expectedV) {
-            for(short s : ByteAlignUtil.encodeVbyte(v)) {
-                expected.add(s);
-            }
-        }
-        
-        ArrayList<Short> result = indexer.adjustPostingHeader(posting, pSkipInfo);
-        assertThat("head should be 5 instead of 15 because of delta encoding", result, is(expected));
-        
-        int idx = 1;
-        for(int i=1; i<result.size(); ) {
-            assertThat("Everyelse sholud be same at " + idx, 
-                    ByteAlignUtil.decodeVbyte(i, result), is(expectedV[idx++]));
-            i = ByteAlignUtil.nextPosition(i, result);
-        }
-        //suppose last doc id of previous skip pointer is 
-        pSkipInfo.add(10000); pSkipInfo.add(15);
-        
-        //we have new posting which will be added and have doc id 10004 and 10006
-        posting.clear();
-        for(int v : new int[] {10004, 2, 3, 17, 2, 1, 5}) {
-            for(short s : ByteAlignUtil.encodeVbyte(v)) {
-                posting.add(s);
-            }
-        }
-        expectedV = new int[] {4, 2, 3, 17, 2, 1, 5};
-        expected.clear();
-        for(int v : expectedV) {
-            for(short s : ByteAlignUtil.encodeVbyte(v)) {
-                expected.add(s);
-            }
-        }
-        
-        result = indexer.adjustPostingHeader(posting, pSkipInfo);
-        assertThat("head should be 4 instead of 10004 because of delta encoding", result, is(expected));
-        
-        idx = 1;
-        for(int i=1; i<result.size(); ) {
-            assertThat("Everyelse sholud be same at " + idx, 
-                    ByteAlignUtil.decodeVbyte(i, result), is(expectedV[idx++]));
-            i = ByteAlignUtil.nextPosition(i, result);
-        }
     }
     
     @Test
-    public void testAdjustSkipInfo() {
-        ArrayList<Integer> skipInfo = new ArrayList<Integer>(
-                Arrays.asList(new Integer[]{5, 4, 2, 7, 10, 10})
-        );
+    public void testMergePartialIndex() {
+        File testDir = new File(_options._indexPrefix);
+        deleteDirectory(testDir);
+        testDir.mkdirs();
         
-        //suppose that after adjusting head of corresponded posting, head bytes reduced as -1
-        indexer.adjustSkipInfo(skipInfo, -1);
-        assertThat("All position should be reduced by -1", skipInfo,
-                is(new ArrayList<Integer>(Arrays.asList(new Integer[]{5, 3, 2, 6, 10, 9}))
-        ));
+        indexer.makeIndex(doc1, 1);
+        indexer.writeToFile(1);
         
-        //suppose that after adjusting head of corresponded posting, head bytes increased as 5
-        indexer.adjustSkipInfo(skipInfo, 5);
-        assertThat("All position should be reduced by -1", skipInfo,
-                is(new ArrayList<Integer>(Arrays.asList(new Integer[]{5, 8, 2, 11, 10, 14}))
-        ));
+        indexer.makeIndex(doc2, 2);
+        indexer.writeToFile(2);
+        
+        indexer.makeIndex(doc10, 10);
+        indexer.writeToFile(3);
+        
+        int round = 3;
+        
+        for(int idx=0; idx<IndexerCommon.MAXCORPUS; idx++) {
+            for(int i=1; i<=round; i++) {
+                assertTrue(new File(indexer.getPartialIndexName(idx, round)).exists());
+            }
+        }
+        
+        indexer.mergePartialIndex(round);
+        
+        CompressedIndex index3 = indexer.loadIndex(3);
+        assertThat(index3.size(), is(2));
+        
+        ArrayList<Short> posting = index3.get(3);
+        assertThat(posting2IntArray(posting), is(new int[]{1, 2, 3, 11, 1, 1, 19, 8, 1, 20}));
+        
+        posting = index3.get(33);
+        assertThat(posting2IntArray(posting), is(new int[]{10, 1, 8}));
+        
+        SkipPointer skip3 = indexer.loadSkipPointer(3);
+        ArrayList<Integer> skipInfo = skip3.get(3);
+        assertThat(skipInfo, is(Arrays.asList(new Integer[]{1, 4, 2, 7, 10, 10})));
+        
+        skipInfo = skip3.get(33);
+        assertThat(skipInfo, is(Arrays.asList(new Integer[]{10, 3})));
+        
+        CompressedIndex index18 = indexer.loadIndex(18);
+        assertThat(index18.size(), is(1));
+        posting = index18.get(18);
+        assertThat(posting2IntArray(posting), is(new int[]{2, 1, 5, 8, 1, 2}));
+        
+        SkipPointer skip18 = indexer.loadSkipPointer(18);
+        skipInfo = skip18.get(18);
+        assertThat(skipInfo, is(Arrays.asList(new Integer[]{2, 3, 10, 6})));
+        
+        for(int idx=0; idx<IndexerCommon.MAXCORPUS; idx++) {
+            for(int i=1; i<=round; i++) {
+                assertFalse(new File(indexer.getPartialIndexName(idx, round)).exists());
+            }
+        }
     }
     
+    private int[] posting2IntArray(ArrayList<Short> posting) {
+        ArrayList<Integer> temp = new ArrayList<Integer>();
+        for(int i=0; i<posting.size();) {
+            temp.add(ByteAlignUtil.decodeVbyte(i, posting));
+            i = ByteAlignUtil.nextPosition(i, posting);
+        }
+        
+        int[] result = new int[temp.size()];
+        for(int i=0; i<temp.size();i++) {
+            result[i] = temp.get(i);
+        }
+        
+        return result;
+    }
+
     private boolean deleteDirectory(File directory) {
         if(directory.exists()){
             File[] files = directory.listFiles();

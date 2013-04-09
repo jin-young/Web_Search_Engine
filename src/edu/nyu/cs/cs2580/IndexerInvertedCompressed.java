@@ -33,99 +33,21 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected Map<String, Integer> t_dictionary;
     protected int t_numDocs;
     protected long t_totalTermFrequency;
-    
+
     protected boolean underTest = false;
-    protected Map<Integer, Integer> lastProcessedDocId;
+    protected Map<Integer, Integer[]> lastProcessedDocInfo;
 
     public IndexerInvertedCompressed(Options options) {
         super(options);
         _index = new CompressedIndex();
         _skipPointer = new SkipPointer();
-        lastProcessedDocId = new HashMap<Integer, Integer>();
-        
+        lastProcessedDocInfo = new HashMap<Integer, Integer[]>();
+
         DIV = 1000;
 
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
 
-    @Override
-    protected void mergePartialIndex(int lastRound) {
-        
-        for(int idx = 0; idx < MAXCORPUS; idx++) {
-            CompressedIndex finalIndex = new CompressedIndex();
-            //SkipPointer finalSkipPointer = new SkipPointer();
-            
-            for(int round=1; round <= lastRound; round++) {
-                CompressedIndex currIndex = loadIndex(idx, round);
-                //SkipPointer currSkipPointer = loadSkipPointer(idx, round);
-                
-                if(finalIndex.isEmpty()) {
-                    finalIndex = currIndex;
-                    //finalSkipPointer = currSkipPointer;
-                    
-                    continue;
-                } else {
-                    for(int wordId : currIndex.keySet()) {
-                        ArrayList<Short> posting = currIndex.get(wordId);
-                        //ArrayList<Integer> skipInfo = currSkipPointer.get(wordId);
-                        
-                        if(!finalIndex.containsKey(wordId)) {
-                            finalIndex.put(wordId, posting);
-                            //finalSkipPointer.put(wordId, skipInfo);
-                        } else {
-                            //ArrayList<Integer> prevSkipInfo = finalSkipPointer.get(wordId);
-                            
-                            //because of delta encoding, we need to modify first doc id
-                            //in a posting list
-                            //ArrayList<Short> adjPosting = adjustPostingHeader(posting, prevSkipInfo);
-                            
-                            //skip info also should be adjusted
-                            //adjustSkipInfo(skipInfo, adjPosting.size() - posting.size());
-                            
-                            finalIndex.get(wordId).addAll(posting);
-                            //prevSkipInfo.addAll(skipInfo);
-                        }
-                    }
-                }
-                
-            }
-            
-            writeFinalIndex(idx, finalIndex);
-            cleaningPartialIndex(idx, lastRound);
-            
-            //writeFinalSkipPointer(idx, finalSkipPointer);
-            //cleaningPartialSkipPointer(idx, lastRound);
-        }
-    }
-    
-    protected void writeFinalSkipPointer(int idx, Object target) {
-        //write final skip pointer
-        ObjectOutputStream writer = null;
-        try {
-            if(!underTest)
-                System.out.println("Writing final skip pointer " + idx);
-            
-            writer = createObjOutStream(getPartialSkipPointerName(idx));
-            writer.writeObject(target);
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during writing final skip pointer");
-        }
-    }
-    
-    protected void cleaningPartialSkipPointer(int idx, int lastRound) {
-        if(!underTest)
-            System.out.println("Cleaning partial skip pointer files");
-        
-        for(int round=1; round <= lastRound; round++) {
-            File partialIdx = new File(getPartialSkipPointerName(idx, round));
-            if(partialIdx.exists()) {
-                partialIdx.delete();
-            }
-        }
-    }    
-    
     @Override
     public Document getDoc(int docid) {
         return _documents.get(docid);
@@ -196,7 +118,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             return new ArrayList<Short>();
         else {
             ArrayList<Short> docMap = _tmpIndex.get(idx);
-            _index.put(idx, docMap);        
+            _index.put(idx, docMap);
             return docMap;
         }
     }
@@ -205,8 +127,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     public void loadIndex() throws IOException, ClassNotFoundException {
         ObjectInputStream reader = createObjInStream(getIndexerFileName("/dictionary.idx"));
         IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
-        
-        if(!underTest)
+
+        if (!underTest)
             System.out.println("Load Indexer from: " + getIndexerFileName("/dictionary.idx"));
 
         this._documents = loaded.t_documents;
@@ -216,12 +138,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
         reader.close();
 
-        if(!underTest) {
+        if (!underTest) {
             System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
-                + Long.toString(_totalTermFrequency) + " terms!");
+                    + Long.toString(_totalTermFrequency) + " terms!");
         }
     }
-    
+
     protected String getIndexerFileName(String name) {
         return _options._indexPrefix + name;
     }
@@ -293,13 +215,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     public void writeIndexerToFile() throws IOException {
         String dicFile = _options._indexPrefix + "/dictionary.idx";
         ObjectOutputStream writer = createObjOutStream(dicFile);
-        
+
         // back-up variables from Indexer class
         t_documents = _documents;
         t_dictionary = _dictionary;
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
-        t_skip = _skipPointer;
+        //t_skip = _skipPointer;
 
         writer.writeObject(this);
         writer.close();
@@ -322,80 +244,151 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
          * posList.get(0); return nextPhrase(query, docid, posList.get(1));
          */
     }
-    
-    /////////////////////////////////////////////////////////////////////////////////////////
-    // //////////////// TEST DONE OR NOT NEED TO BE TESTED //////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////
+
+    // ///////////////////////////////////////////////////////////////////////////////////////
+    // //////////////// TEST DONE OR NOT NEED TO BE TESTED
+    // //////////////////////////////////
+    // ///////////////////////////////////////////////////////////////////////////////////////
+
+
+    @Override
+    protected void mergePartialIndex(int lastRound) {
+
+        for (int idx = 0; idx < MAXCORPUS; idx++) {
+            CompressedIndex finalIndex = new CompressedIndex();
+            SkipPointer finalSkipPointer = new SkipPointer();
+
+            for (int round = 1; round <= lastRound; round++) {
+                CompressedIndex currIndex = loadIndex(idx, round);
+                SkipPointer currSkipPointer = loadSkipPointer(idx, round);
+                
+                if(currIndex == null || currSkipPointer == null) continue;
+
+                if (finalIndex.isEmpty()) {
+                    finalIndex = currIndex;
+                    finalSkipPointer = currSkipPointer;
+
+                    continue;
+                } else {
+                    for (int wordId : currIndex.keySet()) {
+                        ArrayList<Short> posting = currIndex.get(wordId);
+                        ArrayList<Integer> skipInfo = currSkipPointer.get(wordId);
+
+                        if (!finalIndex.containsKey(wordId)) {
+                            finalIndex.put(wordId, posting);
+                            finalSkipPointer.put(wordId, skipInfo);
+                        } else {
+                            ArrayList<Integer> prevSkipInfo = finalSkipPointer.get(wordId);
+
+                            finalIndex.get(wordId).addAll(posting);
+                            prevSkipInfo.addAll(skipInfo);
+                        }
+                    }
+                }
+
+            }
+
+            writeFinalIndex(idx, finalIndex);
+            cleaningPartialIndex(idx, lastRound);
+
+            writeFinalSkipPointer(idx, finalSkipPointer);
+            cleaningPartialSkipPointer(idx, lastRound);
+        }
+    }
+
+    protected void writeFinalSkipPointer(int idx, Object target) {
+        // write final skip pointer
+        ObjectOutputStream writer = null;
+        try {
+            if (!underTest)
+                System.out.println("Writing final skip pointer " + idx);
+
+            writer = createObjOutStream(getPartialSkipPointerName(idx));
+            writer.writeObject(target);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error during writing final skip pointer");
+        }
+    }
+
+    protected void cleaningPartialSkipPointer(int idx, int lastRound) {
+        if (!underTest)
+            System.out.println("Cleaning partial skip pointer files");
+
+        for (int round = 1; round <= lastRound; round++) {
+            File partialIdx = new File(getPartialSkipPointerName(idx, round));
+            if (partialIdx.exists()) {
+                partialIdx.delete();
+            }
+        }
+    }
     
     protected int lastDocId(ArrayList<Integer> prevSkipInfo) {
-        if(prevSkipInfo == null || prevSkipInfo.isEmpty())
+        if (prevSkipInfo == null || prevSkipInfo.isEmpty())
             return 0;
         else {
             return prevSkipInfo.get(prevSkipInfo.size() - 2);
         }
     }
+    
+    protected CompressedIndex loadIndex(int indexId) {
+        return loadIndex(indexId, -1);
+    }
 
-    protected void adjustSkipInfo(ArrayList<Integer> skipInfo, int changedLength) {
-        for(int i=0; i<skipInfo.size(); i++) {
-            if(i % 2 == 1) {
-                skipInfo.set(i, skipInfo.get(i) + changedLength);
-            }
-        }
-    }
-    
-    protected ArrayList<Short> adjustPostingHeader(ArrayList<Short> posting, ArrayList<Integer> prevSkipInfo) {
-        int lastDocId = lastDocId(prevSkipInfo);
-        int headDocId = ByteAlignUtil.decodeVbyte(0, posting);
-        int deltaId = headDocId - lastDocId;
-        
-        short[] encodedDeltaId = ByteAlignUtil.encodeVbyte(deltaId);
-        short[] endcodedHeadDocId = ByteAlignUtil.encodeVbyte(headDocId);
-        
-        for(int i=0; i<endcodedHeadDocId.length; i++) {
-            posting.remove(0);
-        }
-        
-        ArrayList<Short> header = new ArrayList<Short>();
-        for(short v : encodedDeltaId)
-            header.add(v);
-        
-        header.addAll(posting);
-        
-        return header;
-    }
-    
     protected CompressedIndex loadIndex(int indexId, int round) {
-        ObjectInputStream reader = 
-                createObjInStream(getPartialIndexName(indexId, round));
         CompressedIndex index = null;
-        
-        try {
-            index = (CompressedIndex)reader.readObject();
-            reader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during load partial index");
+        String filePath = round > 0 ?
+                getPartialIndexName(indexId, round) :
+                getPartialIndexName(indexId);
+                
+        if(new File(filePath).exists()) {
+            ObjectInputStream reader = createObjInStream(filePath);
+            
+            try {
+                index = (CompressedIndex) reader.readObject();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Error during load partial index");
+            }
+        } else {
+            System.out.println("WARNING: Index File " 
+                    + getPartialIndexName(indexId, round) + " does not exist");
         }
-        
+
         return index;
+    }
+
+    protected SkipPointer loadSkipPointer(int indexId) {
+        return loadSkipPointer(indexId, -1);
     }
     
     protected SkipPointer loadSkipPointer(int indexId, int round) {
-        ObjectInputStream reader = 
-                createObjInStream(getPartialSkipPointerName(indexId, round));
         SkipPointer skip = null;
         
-        try {
-            skip = (SkipPointer)reader.readObject();
-            reader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error during load partial index");
-        }
-        
-        return skip;
-    }      
+        String filePath = round > 0 ?
+                getPartialSkipPointerName(indexId, round) :
+                    getPartialSkipPointerName(indexId);
+                
+        if(new File(filePath).exists()) {
+            ObjectInputStream reader = createObjInStream(filePath);
     
+            try {
+                skip = (SkipPointer) reader.readObject();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Error during load partial index");
+            }
+        } else {
+            System.out.println("WARNING: Skip Pointer File " 
+                        + getPartialSkipPointerName(indexId, round) + " does not exist");
+        }
+
+        return skip;
+    }
+
     public int makeIndex(String content, int docId) {
         Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content);
 
@@ -404,12 +397,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             initSkipPointer(wordId);
 
             int offset = addPositionsToIndex(wordsPositionsInDoc.get(wordId), docId, wordId);
-
             addSkipInfo(wordId, docId, offset);
+            
         }
         return 0;
     }
-    
+
     @Override
     public void writeToFile(int round) {
         if (_index.isEmpty())
@@ -423,36 +416,31 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             }
         });
 
-        CompressedIndex tempIndex = new CompressedIndex();
-        //SkipPointer tempSkipPointer = new SkipPointer();
-
-        int corpusId = wordIds[0] % MAXCORPUS;
-        for (int wordId : wordIds) {
-            if (corpusId != (wordId % MAXCORPUS)) {
-                flushCurrentIndex(tempIndex, corpusId, round);
-                //flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
+        //Make sure that all partial index and skip pointer files are generated
+        //regardless of empty of tempIndex
+        int idx = 0;
+        for(int corpusId = 0; corpusId < MAXCORPUS; corpusId++) {
+            CompressedIndex tempIndex = new CompressedIndex();
+            SkipPointer tempSkipPointer = new SkipPointer();
+            
+            while(idx < wordIds.length && corpusId == (wordIds[idx]% MAXCORPUS)) {
+                tempIndex.put(wordIds[idx], _index.remove(wordIds[idx]));
+                tempSkipPointer.put(wordIds[idx], _skipPointer.remove(wordIds[idx]));
                 
-                corpusId = wordId % MAXCORPUS;
-                
-                tempIndex = new CompressedIndex();
-                //tempSkipPointer = new SkipPointer();
+                idx++;
             }
-
-            tempIndex.put(wordId, _index.remove(wordId));
-            //tempSkipPointer.put(wordId, _skipPointer.remove(wordId));
+            
+            flushCurrentIndex(tempIndex, corpusId, round);
+            flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
         }
-        
-        //last partial index and skip pointer
-        flushCurrentIndex(tempIndex, corpusId, round);
-        //flushCurrentSkipPointer(tempSkipPointer, corpusId, round);
     }
-    
+
     protected void flushCurrentIndex(CompressedIndex tempIndex, int corpusId, int round) {
         ObjectOutputStream writer = null;
-        if (tempIndex != null && !tempIndex.isEmpty()) {
-            if(!underTest)
-                System.out.println("Save partial index " + corpusId);
-            
+        if (tempIndex != null) {
+            if (!underTest)
+                System.out.println("Save partial index " + corpusId + " of round " + round);
+
             try {
                 writer = createObjOutStream(getPartialIndexName(corpusId, round));
                 writer.writeObject(tempIndex);
@@ -467,13 +455,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             tempIndex = null;
         }
     }
-    
+
     protected void flushCurrentSkipPointer(SkipPointer sp, int corpusId, int round) {
         ObjectOutputStream writer = null;
-        if (sp != null && !sp.isEmpty()) {
-            if(!underTest)
-                System.out.println("Save partial skip pointer " + corpusId);
-            
+        if (sp != null) {
+            if (!underTest)
+                System.out.println("Save partial skip pointer " + corpusId + " of round " + round);
+
             try {
                 writer = createObjOutStream(getPartialSkipPointerName(corpusId, round));
                 writer.writeObject(sp);
@@ -488,17 +476,17 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             sp = null;
         }
     }
-    
+
     protected int addSkipInfo(int wordId, int docId, int offset) {
         initSkipPointer(wordId);
+
+        int nextStart = lastPosition(wordId) + offset;
+        _skipPointer.get(wordId).addAll(Arrays.asList(new Integer[] { docId, nextStart }));
         
-        int currentEnd = offset + lastPosition(wordId);
-        
-        _skipPointer.get(wordId).addAll(Arrays.asList(new Integer[] { docId, currentEnd }));
-        
-        return currentEnd;
+        recordLastProcessedInfo(wordId, docId, nextStart);
+        return nextStart;
     }
-    
+
     protected void initIndex(int wordId) {
         if (!_index.containsKey(wordId))
             _index.put(wordId, new ArrayList<Short>());
@@ -508,43 +496,50 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         if (!_skipPointer.containsKey(wordId))
             _skipPointer.put(wordId, new ArrayList<Integer>());
     }
-    
+
     protected int addPositionsToIndex(ArrayList<Integer> positions, int docId, int wordId) {
         initIndex(wordId);
-          
-        int delta = 0;
-        if(lastProcessedDocId.containsKey(wordId)) {
-           delta = docId - lastProcessedDocId.get(docId);
-        } else {
-           delta = docId;
-	}
-        lastProcessedDocId.put(wordId, docId);
-        // delta encoding
-        //int offset = ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), docId - lastDocId(wordId));
+
+        int delta = docId - lastDocId(wordId);
+
         int offset = ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), delta);
         offset += ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), positions.size());
 
         for (int p : positions) {
             offset += ByteAlignUtil.appendEncodedValueToList(_index.get(wordId), p);
         }
-
+        
         return offset;
     }
     
+    protected void recordLastProcessedInfo(int wordId, int docId, int nextStartPosition) {
+        //record last processed doc id and next start position
+        Integer[] info = null;
+        if(lastProcessedDocInfo.containsKey(wordId)) {
+            info = lastProcessedDocInfo.get(wordId);
+        } else {
+            info = new Integer[]{0, 0};
+        }
+        
+        info[0] = docId;
+        info[1] = nextStartPosition;
+        lastProcessedDocInfo.put(wordId, info);
+    }
+
     protected int lastPosition(int wordId) {
-        ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-        if (skipInfo == null || skipInfo.isEmpty())
+        if (lastProcessedDocInfo.containsKey(wordId)) {
+            return lastProcessedDocInfo.get(wordId)[1];
+        } else {
             return 0;
-        else
-            return skipInfo.get(skipInfo.size() - 1);
+        }
     }
 
     protected int lastDocId(int wordId) {
-        ArrayList<Integer> skipInfo = _skipPointer.get(wordId);
-        if (skipInfo == null || skipInfo.isEmpty())
+        if (lastProcessedDocInfo.containsKey(wordId)) {
+            return lastProcessedDocInfo.get(wordId)[0];
+        } else {
             return 0;
-        else
-            return skipInfo.get(skipInfo.size() - 2);
+        }
     }
 
     protected Map<Integer, ArrayList<Integer>> wordsPositionsInDoc(String content) {
@@ -605,12 +600,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         String indexPrefix = _options._indexPrefix + "/skip_";
         return indexPrefix + String.format("%02d", idx) + "_" + round + ".idx";
     }
-    
+
     protected String getPartialSkipPointerName(int idx) {
         String indexPrefix = _options._indexPrefix + "/skip_";
         return indexPrefix + String.format("%02d", idx) + ".idx";
-    }    
-    
+    }
+
     public SkipPointer getSkipPointer() {
         return _skipPointer;
     }
@@ -625,5 +620,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     public void setIndex(CompressedIndex _index) {
         this._index = _index;
-    }    
+    }
+
+    public Map<Integer, Integer[]> getLastProcessedDocId() {
+        return lastProcessedDocInfo;
+    }
+
+    public void setLastProcessedDocId(Map<Integer, Integer[]> lastProcessedDocId) {
+        this.lastProcessedDocInfo = lastProcessedDocId;
+    }
 }
