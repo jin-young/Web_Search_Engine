@@ -41,20 +41,7 @@ public class Spearman {
         return sortedList;
 
     }
-/*
-    public static Object loadnumview(String numviewpath) throws IOException {
-        FileInputStream fis = new FileInputStream(numviewpath);
-        ObjectInputStream reader = new ObjectInputStream(fis);
-        Map<String, Document> new_numview = null;
-        try {
-            new_numview = (Map<String, Document>) reader.readObject();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        reader.close();
-        return new_numview;
-    }
-*/
+
     public static Object load(String path) throws IOException {
         FileInputStream fis = new FileInputStream(path);
         ObjectInputStream reader = new ObjectInputStream(fis);
@@ -73,15 +60,12 @@ public class Spearman {
          if(args.length!=2){
         	 System.out.println("Please provide 2 parameters"); } 
          else{
-         Map<String, Document> numview=(Map<String, Document>) load(args[1]); 
-         Map<String, Document> pagerank=(Map<String,Document>) load(args[0]);
-    //	Map<String, Document> numview=(Map<String, Document>) load("data/index/numView.dat");
-     //   Map<String, Document> pagerank=(Map<String, Document>) load("data/index/pageRank.dat");
-         List<Document> sortednumview =sorting(numview);
-         List<Document> sortedpagerank =sorting(pagerank);
-        // System.out.println(sortedpagerank);
-         Float result=calculate(sortednumview,sortedpagerank);
-         System.out.println(result);
+	         Map<String, Document> numview=(Map<String, Document>) load(args[1]); 
+	         Map<String, Document> pagerank=(Map<String,Document>) load(args[0]);
+	         List<Document> sortednumview =sorting(numview);
+	         List<Document> sortedpagerank =sorting(pagerank);
+	         Float result=calculate(sortednumview,sortedpagerank);
+	         System.out.println(result);
          }
     }
 }
