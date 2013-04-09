@@ -7,10 +7,6 @@ TEST_LIBS:=./libs/cglib-nodep-2.2.3.jar:./libs/jsoup-1.7.2.jar:./libs/objenesis-
 compile:
 	javac -classpath ./src:./libs/jsoup-1.7.2.jar $$($(SOURCES))
 
-buildindex: compile
-	java -cp src -Xmx512m -classpath ./src:./libs/jsoup-1.7.2.jar edu.nyu.cs.cs2580.SearchEngine \
---mode=index --options=conf/engine.conf
-
 clean:
 	find ./src -type f -name "*.class" -delete; find ./test -type f -name "*.class" -delete; rm -rf ./data/index/*
 
@@ -20,9 +16,13 @@ jtest: jtest_compile
 jtest_compile: compile
 	javac -cp ./test -classpath ./src:./test:./libs/jsoup-1.7.2.jar:$(TEST_LIBS) $$($(TEST_SOURCES))
 
-index: compile
+index: compile mining
 	java -cp ./src -classpath ./src:./libs/jsoup-1.7.2.jar -Xmx512m edu.nyu.cs.cs2580.SearchEngine \
 -mode=index --port=25804 --options=conf/engine.conf
 
-spearman: compile
+mining: compile
+	java -cp ./src -classpath ./src:./libs/jsoup-1.7.2.jar -Xmx512m edu.nyu.cs.cs2580.SearchEngine \
+--mode=mining --options=conf/engine.conf
+
+spearman: compile mining
 	java -cp ./src edu.nyu.cs.cs2580.Spearman data/index/pageRank.dat data/index/numView.dat
