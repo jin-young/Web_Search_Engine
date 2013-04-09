@@ -44,22 +44,22 @@ public abstract class IndexerCommon extends Indexer {
     }
 
     // The real constructor
-    @SuppressWarnings("unchecked")
     public IndexerCommon(Options options) {
         super(options);
-        
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void constructIndex() throws IOException {
         // load mining data
         try {
-            pageRanks = (Map<Integer, Document>)new CorpusAnalyzerPagerank(options).load();
-            numViews = (Map<Integer, Document>)new LogMinerNumviews(options).load();
+            pageRanks = (Map<Integer, Document>)new CorpusAnalyzerPagerank(this._options).load();
+            numViews = (Map<Integer, Document>)new LogMinerNumviews(this._options).load();
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Error during load page rank / num view info");
         }
-    }
-
-    @Override
-    public void constructIndex() throws IOException {
+        
         // Get All Files list in the Corpus Folder (data/wiki)
         File folder = new File(_options._corpusPrefix);
         File[] listOfFiles = folder.listFiles();

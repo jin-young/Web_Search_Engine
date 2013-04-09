@@ -26,7 +26,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     private CompressedIndex _index;
     private SkipPointer _skipPointer;
-    protected SkipPointer t_skip;
 
     // Back-up variables for serializable file write.
     protected Map<String, Document> t_documents;
@@ -222,8 +221,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         t_numDocs = _numDocs;
         t_totalTermFrequency = _totalTermFrequency;
 
-        //below is not necessary. save space and time!!
+        //belows are not necessary. save space and time!!
         lastProcessedDocInfo.clear();
+        pageRanks.clear();
+        numViews.clear();
         
         writer.writeObject(this);
         writer.close();
