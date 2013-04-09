@@ -55,7 +55,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         System.out.println("Preparing " + this.getClass().getName());
 
         File folder = new File(_options._corpusPrefix);
-
+        
         int docId = 0;
         for (File f : folder.listFiles()) {
             if (f.isFile()) {
@@ -69,8 +69,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         }
         
         // make Link Matrix
-        //buildCorpusGraph(corpus);
-       
+        //buildCorpusGraph(documents);       
         return;
     }
     
@@ -163,7 +162,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 
     protected void buildCorpusGraph(Map<String, Document> corpus) throws IOException {
         
-        int count = 0;
+        int count = 1;
         for (String fName : corpus.keySet()) {
             Document currentDoc = corpus.get(fName);
             int sumLinks = 0;
@@ -188,23 +187,27 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                     sumLinks++;
                 }
             }
-            
+    
             // Normalization of each files
             for(Integer targetDocid : rows.keySet())
                 rows.put(targetDocid, rows.get(targetDocid) / sumLinks);
-                        
-            // Save into File / every 1000 files
-            if (count != 0 && count % 1000 == 0)
-                writeCorpusGraph(count);
             
+            /*
+            // Save into File / every 1000 files
+            if (count % 1000 == 0)
+                writeCorpusGraph(count);
+            */            
             count++;            
         }
         
+        /*
         // Save remain data into File
         if(!corpusGraph.isEmpty())
             writeCorpusGraph(count);
+        */
     }
     
+    /*
     protected void writeCorpusGraph(int index){
         try {
             String fileName = _options._indexPrefix + "/corpusGraph_" + String.format("%02d",  index/DIV) + ".dat";
@@ -220,6 +223,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
             throw new RuntimeException("Error during partial index writing");
         }
     }
+    */
     
     protected void buildGoogleMatrix(){
         
