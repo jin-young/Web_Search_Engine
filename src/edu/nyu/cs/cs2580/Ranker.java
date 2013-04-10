@@ -1,7 +1,11 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Vector;
 
@@ -36,11 +40,13 @@ public abstract class Ranker {
     protected Options _options;
     // CGI arguments user provide through the URL.
     protected CgiArguments _arguments;
-
+    
     // The Indexer via which documents are retrieved, see {@code IndexerFullScan}
     // for a concrete implementation. N.B. Be careful about thread safety here.
     protected Indexer _indexer;
 
+    protected String STOPWORDS_PATH = "data/stop_word/list"; 
+    protected HashSet<String> stopWordSet;
     /**
      * Constructor: the construction of the Ranker requires an Indexer.
      */
@@ -48,6 +54,8 @@ public abstract class Ranker {
 	_options = options;
 	_arguments = arguments;
 	_indexer = indexer;
+	stopWordSet = new HashSet<String>();
+	getStopWordSet();
     }
 
     /**
@@ -96,7 +104,7 @@ public abstract class Ranker {
             termProb.put(token, prob);      
             
             // insertion sorting
-            if(topTerms.size() < _numterms || prob > termProb.get(topTerms.lastElement())){
+            if(!stopWordSet.contains(token) && (topTerms.size() < _numterms || prob > termProb.get(topTerms.lastElement()))){
                 if(topTerms.isEmpty()){ topTerms.add(token);    continue; }
                 
                 for(int i=0; i<topTerms.size(); i++){
@@ -121,6 +129,22 @@ public abstract class Ranker {
             double prob = termProb.get(token) / sumOfTopTerms;
             System.out.println(token + "\t" + prob);
         }            
+    }
+    
+    /**
+     * Get Stop Word List
+     * Path : data/stop_word/list
+     */
+    public void getStopWordSet(){        
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(STOPWORDS_PATH));
+            String s;
+            while ((s = in.readLine()) != null) 
+                stopWordSet.add(s);
+            in.close();
+          } catch (IOException e) {
+              System.err.println(e); 
+          }
     }
     
     /**
