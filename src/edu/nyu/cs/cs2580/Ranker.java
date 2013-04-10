@@ -129,7 +129,7 @@ public abstract class Ranker {
         // Print Result
         for(String token : topTerms){
             double prob = termProb.get(token) / sumOfTopTerms;
-            System.out.println(token + "\t" + prob);
+            response.append(token + "\t" + prob +"\n");
         }            
     }
     

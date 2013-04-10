@@ -71,7 +71,7 @@ public class Bhattacharyya {
                 query2 = queryProb.get(queryList.get(j));
                 for(String term : query1.keySet()){
                     if(query2.containsKey(term))
-                        coefficient += Math.sqrt(query1.get(term) * query2.get(term));
+                        coefficient += Math.sqrt(query1.get(term).doubleValue() * query2.get(term).doubleValue());
                 }
                 
                 //  Test : it show saved in file

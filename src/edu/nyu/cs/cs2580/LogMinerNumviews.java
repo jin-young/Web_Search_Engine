@@ -96,7 +96,7 @@ public class LogMinerNumviews extends LogMiner {
                     	 _numview.get(temp).setNumViews(numviewInt);
                     }
                 } catch(Exception e){
-                    System.err.println(e.getMessage());
+                    //System.err.println(e.getMessage());
                 }
             }else{
             	//wrong format log
@@ -132,6 +132,7 @@ public class LogMinerNumviews extends LogMiner {
 		try {
 		    numviews = (Map<String, Document>)reader.readObject();
         } catch (ClassNotFoundException e) {
+            System.out.println("error 2");
             e.printStackTrace();
             throw new RuntimeException("Error during reading numview data");
         } finally {
