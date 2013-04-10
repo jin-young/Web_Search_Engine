@@ -195,8 +195,8 @@ class QueryHandler implements HttpHandler {
         StringBuffer response = new StringBuffer();
         
         if(uriPath.equals("/search")){      // Search Mode
-            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numResults);
             System.out.println("Search Processing ...");
+            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numResults);
             switch (cgiArgs._outputFormat) {
             case TEXT:
                 constructTextOutput(scoredDocs, response);

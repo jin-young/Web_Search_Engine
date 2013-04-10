@@ -71,9 +71,6 @@ public abstract class Ranker {
         Vector<String> topTerms = new Vector<String>();
         int totalTermNums = 0;
         
-        // test
-        System.out.println("doc size : " + docs.size());
-        
         // Get top ranked document with _numdocs
         for(ScoredDocument doc : docs){
             // Read File content
@@ -93,12 +90,6 @@ public abstract class Ranker {
             }
         }
         
-        // test
-        for(String temp : termProb.keySet())
-            System.out.println(temp + ": " + termProb.get(temp));
-        System.out.println("_numterms : " + _numterms);    
-        
-        
         // Calculate conditional probability
         for(String token : termProb.keySet()){
             double prob = termProb.get(token) / (double)totalTermNums;
@@ -110,24 +101,14 @@ public abstract class Ranker {
                 
                 for(int i=0; i<topTerms.size(); i++){
                     if(prob > termProb.get(topTerms.get(i)).floatValue()){
-                        System.out.println("prob : " + prob + ", termProb : " + termProb.get(topTerms.get(i)).floatValue() + ", i: " + i);
                         topTerms.add(i, token);
                         break;
                     }else if(i == topTerms.size()-1)
                         topTerms.add(token);
                 }
-                System.out.println("size : " + topTerms.size());
                 if(topTerms.size() > _numterms)
                     topTerms.remove( topTerms.size()-1 );                
             }                
-        }
-        
-        // test
-        System.out.println("top terms size : " + topTerms.size());
-        int index = 1;
-        for(String tmp : topTerms){
-            System.out.println(index + ": " + tmp);
-            index++;
         }
         
         // For normalization
