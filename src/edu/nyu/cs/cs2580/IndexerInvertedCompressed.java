@@ -7,13 +7,12 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -38,13 +37,13 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected Map<Integer, Integer[]> lastProcessedDocInfo;
     
     private SkipPointer[] _loadedSkipPointer;
-    private int[] _skipPointerIdxs;
+    //private int[] _skipPointerIdxs;
     private CompressedIndex[] _loadedIndex;
-    private int[] _indexIdxs;
-    private int cacheSize = 5;
+    //private int[] _indexIdxs;
+    //private int cacheSize = 30;
     
     private Map<Integer, Document> _documentsById = null;
-    private Map<String, Map<Integer, ArrayList<Integer>>> _phraseDocMap = null;
+    private Map<String, TreeMap<Integer, ArrayList<Integer>>> _phraseDocMap = null;
     
     public IndexerInvertedCompressed(Options options) {
         super(options);
@@ -55,7 +54,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         System.out.println("Using Indexer: " + this.getClass().getSimpleName());
     }
     
-    protected Map<Integer, ArrayList<Integer>> gerPhraseDocs(String phrase) {
+    protected TreeMap<Integer, ArrayList<Integer>> gerPhraseDocs(String phrase) {
         
         // If it is already existed in the _phraseDocMap, return this.
         if(_phraseDocMap.containsKey(phrase))
@@ -63,24 +62,27 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         
         String[] words = phrase.split("\\s+");
         int firstId = _dictionary.get(words[0]);
-                
-        Vector<Integer> candidates = retriveDocList(words[0]);
-        Map<Integer, ArrayList<Integer>> found = new HashMap<Integer, ArrayList<Integer>>();
+        
+        Vector<Integer> candidates = null;
+        
+        for(String word : words) {
+            if(candidates == null)
+                candidates = retriveDocList(word);
+            else {
+                Vector<Integer> ca = retriveDocList(word);
+                candidates.retainAll(ca);
+            }
+        }
+        
+        TreeMap<Integer, ArrayList<Integer>> found = new TreeMap<Integer, ArrayList<Integer>>();
         
         for(int docId : candidates) {
             //posting consist of (doc id, frequency, [positions])
             ArrayList<Integer> posting = retrivePosting(firstId, docId);
             if(posting != null && !posting.isEmpty()) {
-                List<Integer> positions = posting.subList(2, posting.size()-1);
-                
-                for(int i=0; i<positions.size()-1;i++) {
-                    int position = positions.get(i);
-                    int nextPosition = Integer.MAX_VALUE;
-                    if(i < positions.size()-2) {
-                        nextPosition = positions.get(i+1);
-                    }
-                    
-                    if(findPhraseInDoc(position, nextPosition, docId, Arrays.copyOfRange(words, 1, (words.length-1))) > 0) {
+                for(int position : posting.subList(2, posting.size())) {
+                    if(findPhraseInDoc(position, docId, Arrays.copyOfRange(words, 1, words.length), candidates) > 0) {
+                        //System.out.println(_documentsById.get(docId).getTitle() + " includes the given phrase!!");
                         if(!found.containsKey(docId)) {
                             found.put(docId, new ArrayList<Integer>());
                         }
@@ -96,43 +98,27 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         return found;
     }
  
-    // for example, "new abcd new university"
-    // first new and university could meet condition to be phrase
-    // but, second new and university is better than first one. Thus we need limitPosition variable
-    protected int findPhraseInDoc(int prevPosition, int limitPosition, int targetDocId, String[] words) {
+    protected int findPhraseInDoc(int prevPosition, int targetDocId, String[] words, final Vector<Integer> searchRange) {
         int wordId = _dictionary.get(words[0]);
         int result = -1;
-        if(words.length == 1) {
-            //last word
-            ArrayList<Integer> posting = retrivePosting(wordId, targetDocId);
-            if(posting != null && posting.size() > 0) {
+        
+        Vector<Integer> candidates = retriveDocList(words[0]);
+        candidates.retainAll(searchRange);
+        
+        for(int docId : candidates) {
+            //posting consist of (doc id, frequency, [positions])
+            ArrayList<Integer> posting = retrivePosting(wordId, docId);
+            if(posting != null && !posting.isEmpty()) {
                 for(int position : posting.subList(2, posting.size()-1)) {
-                    if(prevPosition < position && position < limitPosition) {
-                        result = position;
-                        break;
+                    if(words.length == 1) {
+                        if(position - prevPosition == -1) {
+                            result = position;
+                        }
+                    } else {
+                        result = findPhraseInDoc(position, docId, Arrays.copyOfRange(words, 1, words.length), searchRange);
                     }
-                }
-            }
-        } else {
-            Vector<Integer> candidates = retriveDocList(words[0]);
-            
-            for(int docId : candidates) {
-                //posting consist of (doc id, frequency, [positions])
-                ArrayList<Integer> posting = retrivePosting(wordId, docId);
-                if(posting != null && !posting.isEmpty()) {
-                    List<Integer> positions = posting.subList(2, posting.size()-1);
-                    
-                    for(int i=0; i<positions.size()-1;i++) {
-                        int position = positions.get(i);
-                        int nextPosition = Integer.MAX_VALUE;
-                        if(i < positions.size()-2) {
-                            nextPosition = positions.get(i+1);
-                        }
-                        
-                        result = findPhraseInDoc(position, nextPosition, docId, Arrays.copyOfRange(words, 1, (words.length-1)));
-                        if(result > 0) {
-                            break;
-                        }
+                    if(result > 0) {
+                        break;
                     }
                 }
             }
@@ -221,16 +207,14 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     }
     
     @Override
-    public int nextPhrase(String phrase, int docid) {
-        Map<Integer, ArrayList<Integer>> phraseDocMap = gerPhraseDocs(phrase);
-        Set<Integer> keySet = phraseDocMap.keySet();
-        int nextDocId = Integer.MAX_VALUE;
-        for(Integer key : keySet)
-            if(key.intValue() > docid && key.intValue() < nextDocId)
-                nextDocId = key.intValue();
+    public int nextPhrase(String phrase, int prevDocId) {
+        TreeMap<Integer, ArrayList<Integer>> phraseDocMap = gerPhraseDocs(phrase);
         
-        int result = (nextDocId == Integer.MAX_VALUE) ? -1 : nextDocId;
-        return result;
+        for(Integer docId : phraseDocMap.keySet()) {
+            if(prevDocId < docId) return docId;
+        }
+        
+        return -1;
     }
     
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -238,20 +222,29 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     // ///////////////////////////////////////////////////////////////////////////////////////
     
     protected Vector<Integer> retriveDocList(String word) {
-        int idx = _dictionary.get(word);
+        Object result = _dictionary.get(word);
+        
         Vector<Integer> docList = new Vector<Integer>();
 
-        for (int i = 0; i < getSkipInfo(idx).size(); i = i + 2) {
-            docList.add(getSkipInfo(idx).get(i));
+        if(result != null) {
+            int idx = ((Integer)result).intValue();
+            for (int i = 0; i < getSkipInfo(idx).size(); i = i + 2) {
+                docList.add(getSkipInfo(idx).get(i));
+            }
         }
-
-        // Sort the doc list
-        Collections.sort(docList);
 
         return docList;
     }
     
+    private Map<Integer, Map<Integer, ArrayList<Integer>>> postingCache
+     = new HashMap<Integer, Map<Integer, ArrayList<Integer>>>();
+    
     protected ArrayList<Integer> retrivePosting(int wordId, int docId) {
+        if(postingCache.containsKey(wordId)) {
+            if(postingCache.get(wordId).containsKey(docId))
+                return postingCache.get(wordId).get(docId);
+        }
+        
         ArrayList<Integer> skipInfo = getSkipInfo(wordId);
         if(skipInfo == null || skipInfo.isEmpty()) {
             return null;
@@ -269,7 +262,15 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             int startPosition = skipInfo.get(i + 1);
             
             ArrayList<Short> postingList = getPostingList(wordId);
-            return ByteAlignUtil.getPosting(startPosition, postingList);
+            ArrayList<Integer> result = ByteAlignUtil.getPosting(startPosition, postingList);
+            
+            if(!postingCache.containsKey(wordId)) {
+                postingCache.put(wordId, new HashMap<Integer, ArrayList<Integer>>());
+            }
+            
+            postingCache.get(wordId).put(docId, result);
+            
+            return result;
         }
     }
     
@@ -322,8 +323,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     
     protected ArrayList<Integer> getSkipInfo(int wordId) {
         int corpusId = wordId % MAXCORPUS;
-        int cacheId = corpusId % cacheSize;
+        //int cacheId = corpusId % cacheSize;
 
+        /*
         if(_skipPointerIdxs[cacheId] != -1) {
             if(_skipPointerIdxs[cacheId] == corpusId) {
                 //System.out.println("CACHE HIT: Use skip pointer #" + corpusId);
@@ -337,8 +339,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
 
         _skipPointerIdxs[cacheId] = corpusId;
+        */
         
-        return _loadedSkipPointer[cacheId].get(wordId);
+        return _loadedSkipPointer[corpusId].get(wordId);
     }
     
     protected ArrayList<Short> getPostingList(String term) {
@@ -350,8 +353,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     
     private ArrayList<Short> getPostingList(int wordId) {
         int corpusId = wordId % MAXCORPUS;
-        int cacheId = corpusId % cacheSize;
+        //int cacheId = corpusId % cacheSize;
         
+        /*
         if(_indexIdxs[cacheId] != -1) {
             if(_indexIdxs[cacheId] == corpusId) {
                 //System.out.println("CACHE HIT: Use compressed index #" + corpusId);
@@ -360,13 +364,14 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
                 _loadedIndex[cacheId] = loadIndex(corpusId);
             }
         } else {
-            //System.out.println("CACHE MISS: Load compressed index #" + corpusId);
+            System.out.println("CACHE MISS: Load compressed index #" + corpusId);
             _loadedIndex[cacheId] = loadIndex(corpusId);
         }
 
         _indexIdxs[cacheId] = corpusId;
+        */
         
-        return _loadedIndex[cacheId].get(wordId);
+        return _loadedIndex[corpusId].get(wordId);
     }
 
     @Override
@@ -387,21 +392,25 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             _documentsById.put(d._docid, d);
         }
         
-        _phraseDocMap = new HashMap<String, Map<Integer, ArrayList<Integer>>>();
+        _phraseDocMap = new HashMap<String, TreeMap<Integer, ArrayList<Integer>>>();
 
-        System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
-                + Long.toString(_totalTermFrequency) + " terms!");
-        
         // CACHE for improve performance
-        _loadedSkipPointer = new SkipPointer[cacheSize];
-        _loadedIndex = new CompressedIndex[cacheSize];
-        _skipPointerIdxs = new int[cacheSize];
-        _indexIdxs = new int[cacheSize];
+        _loadedSkipPointer = new SkipPointer[MAXCORPUS];
+        _loadedIndex = new CompressedIndex[MAXCORPUS];
+        //_skipPointerIdxs = new int[cacheSize];
+        //_indexIdxs = new int[cacheSize];
         
-        for(int i=0; i<cacheSize; i++) {
-            _skipPointerIdxs[i] = -1;
-            _indexIdxs[i] = -1;
+        for(int i=0; i<MAXCORPUS; i++) {
+            System.out.println("Load partial index " + i);
+            _loadedIndex[i] = loadIndex(i);
+            System.out.println("Load partial skip pointer " + i);
+            _loadedSkipPointer[i] = loadSkipPointer(i);
+            //_skipPointerIdxs[i] = i;
+            //_indexIdxs[i] = i;
         }
+        
+        System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
+                + Long.toString(_totalTermFrequency) + " terms!");        
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
