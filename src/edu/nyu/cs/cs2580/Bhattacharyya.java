@@ -103,7 +103,7 @@ public class Bhattacharyya {
         // Read prf.tsv file
         Bhattacharyya bhattacharyya = new Bhattacharyya();
         bhattacharyya.readQueryUrl(args[0]);
-        
+        bhattacharyya.readQueryProb();
         // Compute Query Similarity
         StringBuffer result = new StringBuffer();
         bhattacharyya.computeQuerySimilarity(result);

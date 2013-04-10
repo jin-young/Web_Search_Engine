@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -f prf*.tsv
+rm -f ./data/prf*.tsv
 i=0
 while read q; do
     i=$((i + 1));
