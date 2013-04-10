@@ -10,6 +10,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Vector;
 
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -268,13 +269,41 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                 float value = 0.0f;
                 for(Integer targetDocid : corpusGraph.get(docid).keySet())
                     value += corpusGraph.get(docid).get(targetDocid);
-                value += (totalDocs - corpusGraph.get(docid).size()) * addConst;
+                value += 1.0f - lambda;
                 doc.setPageRank(value);
             }
         }else if(iterateNum == 2){
+            // G^2
+            MapMatrix matrix = matrixMulti(corpusGraph, corpusGraph);  
+            // a * G ' E
+            HashMap<Integer, Float> aGE = new HashMap<Integer, Float>();
+            for(Integer docid : corpusGraph.keySet()){
+                float sum = 0.0f;
+                for(Integer targetDocid : corpusGraph.get(docid).keySet())
+                    sum += corpusGraph.get(docid).get(targetDocid);
+                aGE.put(docid,  sum * addConst);
+            }
+            // a * E ' G
+            float aEG = 0.0f; 
+            for(Integer docid : corpusGraph.keySet())
+                for(Integer targetDocid : corpusGraph.get(docid).keySet())
+                    aEG += corpusGraph.get(docid).get(targetDocid);                    
+                
+            // (a^2) * (E^2)
+            float a2E2 = addConst * addConst * totalDocs;
             
-            // Need G^2 calculation in here : Jinil
-            
+            for(String docName : documents.keySet()){
+                Document doc = documents.get(docName);
+                int docid = doc._docid;
+                float value = 0.0f;
+                if(matrix.containsKey(docid))               // G^2
+                    for(Integer targetDocid : matrix.get(docid).keySet())
+                        value += matrix.get(docid).get(targetDocid);
+                value += aGE.get(docid) * totalDocs;    // + a * G ' E
+                value += aEG;                                   // + a * E ' G
+                value += a2E2 * totalDocs;                  // + (a^2) * (E^2)
+                doc.setPageRank(value);
+            }
         }
     }
     
