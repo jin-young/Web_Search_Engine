@@ -97,6 +97,7 @@ public class ByteAlignUtil {
     public static ArrayList<Integer> getPosting(int position, ArrayList<Short> postingList) {
         ArrayList<Integer> temp = new ArrayList<Integer>();
         
+        int p = 0;
         if(position < postingList.size()) {
             //add doc id
             temp.add(decodeVbyte(position, postingList));
@@ -106,7 +107,8 @@ public class ByteAlignUtil {
             
             position = nextPosition(nextPosition(position, postingList), postingList);
             for(int i=0; i<numOfAppear; i++) {
-                temp.add(decodeVbyte(position, postingList));
+                p += decodeVbyte(position, postingList); //because of delta encoding
+                temp.add(p);
                 position = nextPosition(position, postingList);
             }
         }
