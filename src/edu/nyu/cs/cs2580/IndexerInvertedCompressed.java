@@ -11,7 +11,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -37,10 +36,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected Map<Integer, Integer[]> lastProcessedDocInfo;
     
     private SkipPointer[] _loadedSkipPointer;
-    //private int[] _skipPointerIdxs;
+    private int[] _skipPointerIdxs;
     private CompressedIndex[] _loadedIndex;
-    //private int[] _indexIdxs;
-    //private int cacheSize = 30;
+    private int[] _indexIdxs;
+    private int cacheSize = 3;
     
     private Map<Integer, Document> _documentsById = null;
     private Map<String, TreeMap<Integer, ArrayList<Integer>>> _phraseDocMap = null;
@@ -323,9 +322,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     
     protected ArrayList<Integer> getSkipInfo(int wordId) {
         int corpusId = wordId % MAXCORPUS;
-        //int cacheId = corpusId % cacheSize;
+        int cacheId = corpusId % cacheSize;
 
-        /*
         if(_skipPointerIdxs[cacheId] != -1) {
             if(_skipPointerIdxs[cacheId] == corpusId) {
                 //System.out.println("CACHE HIT: Use skip pointer #" + corpusId);
@@ -339,9 +337,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
 
         _skipPointerIdxs[cacheId] = corpusId;
-        */
         
-        return _loadedSkipPointer[corpusId].get(wordId);
+        return _loadedSkipPointer[cacheId].get(wordId);
     }
     
     protected ArrayList<Short> getPostingList(String term) {
@@ -353,9 +350,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     
     private ArrayList<Short> getPostingList(int wordId) {
         int corpusId = wordId % MAXCORPUS;
-        //int cacheId = corpusId % cacheSize;
+        int cacheId = corpusId % cacheSize;
         
-        /*
         if(_indexIdxs[cacheId] != -1) {
             if(_indexIdxs[cacheId] == corpusId) {
                 //System.out.println("CACHE HIT: Use compressed index #" + corpusId);
@@ -369,9 +365,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
 
         _indexIdxs[cacheId] = corpusId;
-        */
         
-        return _loadedIndex[corpusId].get(wordId);
+        return _loadedIndex[cacheId].get(wordId);
     }
 
     @Override
@@ -395,18 +390,18 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         _phraseDocMap = new HashMap<String, TreeMap<Integer, ArrayList<Integer>>>();
 
         // CACHE for improve performance
-        _loadedSkipPointer = new SkipPointer[MAXCORPUS];
-        _loadedIndex = new CompressedIndex[MAXCORPUS];
-        //_skipPointerIdxs = new int[cacheSize];
-        //_indexIdxs = new int[cacheSize];
+        _loadedSkipPointer = new SkipPointer[cacheSize];
+        _loadedIndex = new CompressedIndex[cacheSize];
+        _skipPointerIdxs = new int[cacheSize];
+        _indexIdxs = new int[cacheSize];
         
-        for(int i=0; i<MAXCORPUS; i++) {
+        for(int i=0; i<cacheSize; i++) {
             System.out.println("Load partial index " + i);
             _loadedIndex[i] = loadIndex(i);
             System.out.println("Load partial skip pointer " + i);
             _loadedSkipPointer[i] = loadSkipPointer(i);
-            //_skipPointerIdxs[i] = i;
-            //_indexIdxs[i] = i;
+            _skipPointerIdxs[i] = i;
+            _indexIdxs[i] = i;
         }
         
         System.out.println(Integer.toString(_numDocs) + " documents loaded " + "with "
