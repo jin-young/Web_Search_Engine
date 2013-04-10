@@ -1,6 +1,11 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
+import java.util.HashMap;
+import java.util.Scanner;
 import java.util.Vector;
+
+import org.jsoup.Jsoup;
 
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -52,7 +57,91 @@ public abstract class Ranker {
      * @return Up to {@code numResults} scored documents in ranked order
      */
     public abstract Vector<ScoredDocument> runQuery(Query query, int numResults);
-
+    
+    /**
+     * Compute Query Representations for PRF mode
+     * @param docs
+     * @param response
+     * @param _numterms
+     */
+    public void computeQueryRep(Vector<ScoredDocument> docs, StringBuffer response, int _numterms){
+        System.out.println("Ranker: compute Query Representation ...");
+        
+        HashMap<String, Double> termProb = new HashMap<String, Double>();
+        Vector<String> topTerms = new Vector<String>();
+        int totalTermNums = 0;
+        
+        // test
+        System.out.println("doc size : " + docs.size());
+        
+        // Get top ranked document with _numdocs
+        for(ScoredDocument doc : docs){
+            // Read File content
+            File file = new File(doc.getUrl());
+            
+            String content = ((IndexerCommon)_indexer).getFileContent(file);
+            Scanner s = new Scanner(content);
+        
+            // Count the terms in the content
+            while(s.hasNext()){
+                String token = ((IndexerCommon)_indexer).porterAlg(s.next()).toLowerCase();
+                if(termProb.containsKey(token))
+                    termProb.put(token, termProb.get(token)+1.0);
+                else
+                    termProb.put(token,  1.0);
+                totalTermNums++;                
+            }
+        }
+        
+        // test
+        for(String temp : termProb.keySet())
+            System.out.println(temp + ": " + termProb.get(temp));
+        System.out.println("_numterms : " + _numterms);    
+        
+        
+        // Calculate conditional probability
+        for(String token : termProb.keySet()){
+            double prob = termProb.get(token) / (double)totalTermNums;
+            termProb.put(token, prob);      
+            
+            // insertion sorting
+            if(topTerms.size() < _numterms || prob > termProb.get(topTerms.lastElement())){
+                if(topTerms.isEmpty()){ topTerms.add(token);    continue; }
+                
+                for(int i=0; i<topTerms.size(); i++){
+                    if(prob > termProb.get(topTerms.get(i)).floatValue()){
+                        System.out.println("prob : " + prob + ", termProb : " + termProb.get(topTerms.get(i)).floatValue() + ", i: " + i);
+                        topTerms.add(i, token);
+                        break;
+                    }else if(i == topTerms.size()-1)
+                        topTerms.add(token);
+                }
+                System.out.println("size : " + topTerms.size());
+                if(topTerms.size() > _numterms)
+                    topTerms.remove( topTerms.size()-1 );                
+            }                
+        }
+        
+        // test
+        System.out.println("top terms size : " + topTerms.size());
+        int index = 1;
+        for(String tmp : topTerms){
+            System.out.println(index + ": " + tmp);
+            index++;
+        }
+        
+        // For normalization
+        double sumOfTopTerms = 0.0;
+        for(String token : topTerms)
+            sumOfTopTerms += termProb.get(token);
+        
+        // Print Result
+        for(String token : topTerms){
+            double prob = termProb.get(token) / sumOfTopTerms;
+            System.out.println(token + "\t" + prob);
+        }            
+    }
+    
     /**
      * All Rankers must be created through this factory class based on the
      * provided {@code arguments}.
@@ -82,5 +171,5 @@ public abstract class Ranker {
 			}
 			return null;
 		}
-	}
+	}  
 }

@@ -25,7 +25,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     
     protected int DIV = 1000;
     protected float lambda = 0.1f;    // 0.1 or 0.9 
-    protected int iterateNum = 2;        // 1 or 2
+    protected int iterateNum = 1;        // 1 or 2
     
     public CorpusAnalyzerPagerank(Options options) {
         super(options);

@@ -1,5 +1,8 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
+import java.util.HashMap;
+import java.util.Scanner;
 import java.util.Vector;
 import java.util.Collections;
 import java.util.PriorityQueue;

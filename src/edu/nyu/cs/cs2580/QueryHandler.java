@@ -191,13 +191,11 @@ class QueryHandler implements HttpHandler {
         processedQuery.processQuery();
 
         // Ranking.
-        int numResultDocs = cgiArgs._numResults;
-        if(uriPath.equals("/prf"))   numResultDocs = cgiArgs._numdocs;
-        Vector<ScoredDocument> scoredDocs = ranker.runQuery(processedQuery, numResultDocs);
-        
+        Vector<ScoredDocument> scoredDocs = null;
         StringBuffer response = new StringBuffer();
-        // Search Mode
-        if(uriPath.equals("/search")){
+        
+        if(uriPath.equals("/search")){      // Search Mode
+            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numResults);
             System.out.println("Search Processing ...");
             switch (cgiArgs._outputFormat) {
             case TEXT:
@@ -209,74 +207,13 @@ class QueryHandler implements HttpHandler {
             default:
                 // nothing
             }
-        }
-        // Pseudo-Relevance Feedback Mode
-        else if(uriPath.equals("/prf")){
+        }else if(uriPath.equals("/prf")){       // Pseudo-Relevance Feedback Mode
             System.out.println("PRF Processing ...");
-            computeRepresent(scoredDocs, response, cgiArgs._numterms);
+            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numdocs);
+            ranker.computeQueryRep(scoredDocs, response, cgiArgs._numterms);
         }
         
         respondWithMsg(exchange, response.toString());
         System.out.println("Finished query: " + cgiArgs._query);
     }
-
-    /**
-     * Compute Query Representations
-     * @param docs
-     * @param response
-     * @param _numterms
-     */
-    public void computeRepresent(final Vector<ScoredDocument> docs, StringBuffer response, int _numterms){
-        HashMap<String, Double> termProb = new HashMap<String, Double>();
-        Vector<String> topTerms = new Vector<String>();
-        int totalTermNums = 0;
-        
-        // Get top ranked document with _numdocs
-        for(ScoredDocument doc : docs){
-            // Read File content
-            File file = new File(doc.getUrl());            
-            String content = ((IndexerCommon)_indexer).getFileContent(file);
-            Scanner s = new Scanner(content);
-        
-            // Count the terms in the content
-            while(s.hasNext()){
-                String token = ((IndexerCommon)_indexer).porterAlg(s.next()).toLowerCase();
-                if(termProb.containsKey(token))
-                    termProb.put(token, termProb.get(token)+1.0);
-                else
-                    termProb.put(token,  1.0);
-                totalTermNums++;                
-            }
-        }
-        
-        // Calculate conditional probability
-        for(String token : termProb.keySet()){
-            double prob = termProb.get(token) / totalTermNums;
-            termProb.put(token, prob);      
-            
-            // insertion sorting
-            if(topTerms.size() < _numterms || prob > termProb.get(topTerms.lastElement())){
-                for(int i=0; i<topTerms.size(); i++){
-                    if(prob > termProb.get(topTerms.get(i)))
-                        topTerms.add(i, token);
-                    else if(i == topTerms.size()-1)
-                        topTerms.add(token);
-                }
-                if(topTerms.size() > _numterms)
-                    topTerms.remove( topTerms.size()-1 );
-            }                
-        }
-        
-        // For normalization
-        double sumOfTopTerms = 0.0;
-        for(String token : topTerms)
-            sumOfTopTerms += termProb.get(token);
-        
-        // Print Result
-        for(String token : topTerms){
-            double prob = termProb.get(token) / sumOfTopTerms;
-            System.out.println(token + "\t" + prob);
-        }            
-    }
-
 }
