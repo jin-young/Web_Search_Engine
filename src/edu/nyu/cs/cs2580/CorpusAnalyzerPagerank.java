@@ -25,11 +25,12 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     
     protected int DIV = 1000;
     protected float lambda = 0.1f;    // 0.1 or 0.9 
-    protected int iterateNum = 1;        // 1 or 2
+    protected int iterateNum = 2;        // 1 or 2
     
     public CorpusAnalyzerPagerank(Options options) {
         super(options);
         documents = new HashMap<String, Document>();
+        corpusGraph = new MapMatrix();
     }
 
     /**
@@ -69,8 +70,9 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
             }
         }
         
-        // make Link Matrix
-        //buildCorpusGraph(documents);       
+        // Make Corpus Graph
+        buildCorpusGraph(documents);
+        
         return;
     }
     
@@ -89,6 +91,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
      */
     @Override
     public void compute() throws IOException {
+        System.out.println("Start Computing ...");
         //Map<String, Float> pageRank = new HashMap<String, Float>();
         
         System.out.println("Computing using " + this.getClass().getName());
@@ -159,19 +162,12 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     }
 
     protected void buildCorpusGraph(Map<String, Document> corpus) throws IOException {
-        
+        System.out.println("Making Corpus Graph ...");
         int count = 1;
         for (String fName : corpus.keySet()) {
             Document currentDoc = corpus.get(fName);
             int sumLinks = 0;
-            
-            Map<Integer, Float> rows = null;
-            if (corpusGraph.containsKey(currentDoc._docid)) {
-                rows = corpusGraph.get(currentDoc._docid);
-            } else {
-                rows = new HashMap<Integer, Float>();
-                corpusGraph.put(currentDoc._docid, rows);
-            }
+            Map<Integer, Float> rows = new HashMap<Integer, Float>();
             
             for (String href : getAchors(fName)) {
                 if (corpus.containsKey(href)) {
@@ -185,10 +181,12 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                     sumLinks++;
                 }
             }
-    
+            
             // Normalization of each files
             for(Integer targetDocid : rows.keySet())
                 rows.put(targetDocid, rows.get(targetDocid) / sumLinks);
+            
+            corpusGraph.put(currentDoc._docid, rows);
             
             /*
             // Save into File / every 1000 files
@@ -229,6 +227,8 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
      * @return transitioned matrix
      */
     protected MapMatrix transMatrix(MapMatrix matrix){
+        System.out.println("Translate matrix");
+        
         MapMatrix result = new MapMatrix();
         File folder = new File(_options._corpusPrefix);
         
@@ -262,20 +262,29 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         int totalDocs = documents.size();
         float addConst = (1.0f-lambda) * (1.0f/(float)totalDocs);
        
-        if(iterateNum == 1){        
+        System.out.println("Calculating Page Rank ...");
+        if(iterateNum == 1){      
             for(String docName : documents.keySet()){
                 Document doc = documents.get(docName);
                 int docid = doc._docid;
                 float value = 0.0f;
-                for(Integer targetDocid : corpusGraph.get(docid).keySet())
-                    value += corpusGraph.get(docid).get(targetDocid);
+                
+                if(corpusGraph.containsKey(docid)){
+                    for(Integer targetDocid : corpusGraph.get(docid).keySet()){
+                        System.out.print(targetDocid + " ");
+                        value += corpusGraph.get(docid).get(targetDocid);
+                    }
+                }
                 value += 1.0f - lambda;
-                doc.setPageRank(value);
+                doc.setPageRank(value);                
             }
+            
         }else if(iterateNum == 2){
             // G^2
+            System.out.println("G^2");
             MapMatrix matrix = matrixMulti(corpusGraph, corpusGraph);  
             // a * G ' E
+            System.out.println("a * G  E");
             HashMap<Integer, Float> aGE = new HashMap<Integer, Float>();
             for(Integer docid : corpusGraph.keySet()){
                 float sum = 0.0f;
@@ -284,27 +293,35 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                 aGE.put(docid,  sum * addConst);
             }
             // a * E ' G
+            System.out.println("aEG");
             float aEG = 0.0f; 
             for(Integer docid : corpusGraph.keySet())
                 for(Integer targetDocid : corpusGraph.get(docid).keySet())
                     aEG += corpusGraph.get(docid).get(targetDocid);                    
                 
             // (a^2) * (E^2)
+            System.out.println("a2E2");
             float a2E2 = addConst * addConst * totalDocs;
             
+            System.out.println("set page rank value");
             for(String docName : documents.keySet()){
                 Document doc = documents.get(docName);
                 int docid = doc._docid;
                 float value = 0.0f;
                 if(matrix.containsKey(docid))               // G^2
                     for(Integer targetDocid : matrix.get(docid).keySet())
-                        value += matrix.get(docid).get(targetDocid);
-                value += aGE.get(docid) * totalDocs;    // + a * G ' E
+                        value += matrix.get(docid).get(targetDocid).floatValue();
+                value += aGE.get(docid).floatValue() * (float)totalDocs;    // + a * G ' E
                 value += aEG;                                   // + a * E ' G
                 value += a2E2 * totalDocs;                  // + (a^2) * (E^2)
                 doc.setPageRank(value);
+                System.out.println(doc.getTitle() + ": " + value);
             }
         }
+        
+        // Test
+        for(String docName : documents.keySet())
+            System.out.println(docName + ": " + documents.get(docName).getPageRank());
     }
     
     // Actually, below algorithm looks like having performance O(n^3) if worst case is given.
@@ -313,6 +330,25 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
     protected MapMatrix matrixMulti(MapMatrix m1, MapMatrix m2) {
         MapMatrix result = new MapMatrix();
         
+        for(Integer docId1 : m1.keySet()) {
+            for(Integer docId2 : m2.keySet()){
+                for(Integer key : m1.get(docId1).keySet()){
+                    if(m2.get(docId2).containsKey(key)){
+                        if(!result.containsKey(docId1))
+                            result.put(docId1, new HashMap<Integer, Float>());
+                        if(!result.get(docId1).containsKey(key))
+                            result.get(docId1).put(key,  0.0f);
+                        
+                        float value = m1.get(docId1).get(key) * m2.get(docId2).get(key);
+                        value += result.get(docId1).get(key);
+                        
+                        result.get(docId1).put(key, value);    
+                    }
+                }
+            }
+        }
+            
+        /*
         for(Integer docId : m1.keySet()) {
             for(Integer key1 : m1.get(docId).keySet()) {
                 if( m2.containsKey(key1)) {
@@ -322,7 +358,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                             Map<Integer, Float> inner = result.get(docId);
                             
                             if(inner.containsKey(key2)) {
-                                inner.put(key2, inner.get(key2) + val);
+                                inner.put(key2, inner.get(key2).floatValue() + val);
                             } else {
                                 inner.put(key2, val);
                             }
@@ -336,11 +372,13 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                 }
             }
         }
+        */
         
         return result;
     }    
     
     protected MapMatrix matrixTimesScala(float v, MapMatrix m1) {
+        System.out.println("Matrix Times Scala");
         MapMatrix result = new MapMatrix();
         
         for(Integer docId : m1.keySet()) {
