@@ -39,7 +39,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     private int[] _skipPointerIdxs;
     private CompressedIndex[] _loadedIndex;
     private int[] _indexIdxs;
-    private int cacheSize = 3;
+    private int cacheSize = 2;
     
     private Map<Integer, Document> _documentsById = null;
     private Map<String, TreeMap<Integer, ArrayList<Integer>>> _phraseDocMap = null;
