@@ -58,6 +58,19 @@ class Document implements Serializable {
       return _docsInCorpus.contains(new BigInteger(MD.digest(name.getBytes())));
     }
   }
+  
+  @Override
+  public boolean equals(Object object)
+  {
+      boolean sameSame = false;
+
+      if (object != null && object instanceof Document)
+      {
+          sameSame = this._docid == ((Document) object)._docid;
+      }
+
+      return sameSame;
+  }  
 
   public int _docid;
 
