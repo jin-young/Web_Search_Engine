@@ -320,7 +320,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             return null;
     }
     
+    private Map<Integer, ArrayList<Integer>> _calledSkipInfo =
+         new HashMap<Integer, ArrayList<Integer>>();
     protected ArrayList<Integer> getSkipInfo(int wordId) {
+        if(_calledSkipInfo.containsKey(wordId))
+            return _calledSkipInfo.get(wordId);
+
         int corpusId = wordId % MAXCORPUS;
         int cacheId = corpusId % cacheSize;
 
@@ -337,9 +342,15 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
 
         _skipPointerIdxs[cacheId] = corpusId;
+
+        _calledSkipInfo.put(wordId, _loadedSkipPointer[cacheId].get(wordId));        
         
-        return _loadedSkipPointer[cacheId].get(wordId);
+        //return _loadedSkipPointer[cacheId].get(wordId);
+        return _calledSkipInfo.get(wordId);
     }
+
+    private Map<Integer, ArrayList<Short>> _calledPostingList =
+         new HashMap<Integer, ArrayList<Short>>();
     
     protected ArrayList<Short> getPostingList(String term) {
         if(_dictionary.containsKey(term)) 
@@ -349,6 +360,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     }    
     
     private ArrayList<Short> getPostingList(int wordId) {
+        if(_calledPostingList.containsKey(wordId))
+            return _calledPostingList.get(wordId);
+
         int corpusId = wordId % MAXCORPUS;
         int cacheId = corpusId % cacheSize;
         
@@ -365,8 +379,9 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
 
         _indexIdxs[cacheId] = corpusId;
-        
-        return _loadedIndex[cacheId].get(wordId);
+        _calledPostingList.put(wordId, _loadedIndex[cacheId].get(wordId));        
+        //return _loadedIndex[cacheId].get(wordId);
+        return _calledPostingList.get(wordId);
     }
 
     @Override
