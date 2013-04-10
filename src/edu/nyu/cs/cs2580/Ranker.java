@@ -9,8 +9,6 @@ import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Vector;
 
-import org.jsoup.Jsoup;
-
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -96,6 +94,8 @@ public abstract class Ranker {
                     termProb.put(token,  1.0);
                 totalTermNums++;                
             }
+            
+            s.close();
         }
         
         // Calculate conditional probability
@@ -107,12 +107,14 @@ public abstract class Ranker {
             if(!stopWordSet.contains(token) && (topTerms.size() < _numterms || prob > termProb.get(topTerms.lastElement()))){
                 if(topTerms.isEmpty()){ topTerms.add(token);    continue; }
                 
-                for(int i=0; i<topTerms.size(); i++){
+                int end = topTerms.size();
+                for(int i=0; i<end; i++){
                     if(prob > termProb.get(topTerms.get(i)).floatValue()){
                         topTerms.add(i, token);
                         break;
-                    }else if(i == topTerms.size()-1)
+                    }else if(i == topTerms.size()-1) {
                         topTerms.add(token);
+                    }
                 }
                 if(topTerms.size() > _numterms)
                     topTerms.remove( topTerms.size()-1 );                
