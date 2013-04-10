@@ -269,22 +269,19 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                 int docid = doc._docid;
                 float value = 0.0f;
                 
-                if(corpusGraph.containsKey(docid)){
-                    for(Integer targetDocid : corpusGraph.get(docid).keySet()){
-                        System.out.print(targetDocid + " ");
+                if(corpusGraph.containsKey(docid))
+                    for(Integer targetDocid : corpusGraph.get(docid).keySet())
                         value += corpusGraph.get(docid).get(targetDocid);
-                    }
-                }
+                
                 value += 1.0f - lambda;
                 doc.setPageRank(value);                
             }
             
         }else if(iterateNum == 2){
             // G^2
-            System.out.println("G^2");
             MapMatrix matrix = matrixMulti(corpusGraph, corpusGraph);  
+            
             // a * G ' E
-            System.out.println("a * G  E");
             HashMap<Integer, Float> aGE = new HashMap<Integer, Float>();
             for(Integer docid : corpusGraph.keySet()){
                 float sum = 0.0f;
@@ -292,36 +289,37 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
                     sum += corpusGraph.get(docid).get(targetDocid);
                 aGE.put(docid,  sum * addConst);
             }
+            
             // a * E ' G
-            System.out.println("aEG");
             float aEG = 0.0f; 
             for(Integer docid : corpusGraph.keySet())
                 for(Integer targetDocid : corpusGraph.get(docid).keySet())
                     aEG += corpusGraph.get(docid).get(targetDocid);                    
                 
             // (a^2) * (E^2)
-            System.out.println("a2E2");
             float a2E2 = addConst * addConst * totalDocs;
             
-            System.out.println("set page rank value");
             for(String docName : documents.keySet()){
                 Document doc = documents.get(docName);
                 int docid = doc._docid;
                 float value = 0.0f;
+                
                 if(matrix.containsKey(docid))               // G^2
                     for(Integer targetDocid : matrix.get(docid).keySet())
                         value += matrix.get(docid).get(targetDocid).floatValue();
-                value += aGE.get(docid).floatValue() * (float)totalDocs;    // + a * G ' E
+                if(aGE.containsKey(docid))
+                    value += aGE.get(docid).floatValue() * (float)totalDocs;    // + a * G ' E
                 value += aEG;                                   // + a * E ' G
-                value += a2E2 * totalDocs;                  // + (a^2) * (E^2)
-                doc.setPageRank(value);
-                System.out.println(doc.getTitle() + ": " + value);
+                value += a2E2 * (float)totalDocs;                  // + (a^2) * (E^2)
+                doc.setPageRank(value);                
             }
         }
         
+        /*
         // Test
         for(String docName : documents.keySet())
             System.out.println(docName + ": " + documents.get(docName).getPageRank());
+            */
     }
     
     // Actually, below algorithm looks like having performance O(n^3) if worst case is given.
