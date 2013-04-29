@@ -136,6 +136,16 @@ class QueryHandler implements HttpHandler {
         responseBody.close();
     }
 
+    private void respondWithHtmlMsg(HttpExchange exchange, final String message) throws IOException {
+        Headers responseHeaders = exchange.getResponseHeaders();
+        responseHeaders.set("Content-Type", "text/html");
+        exchange.sendResponseHeaders(200, 0); // arbitrary number of
+        // bytes
+        OutputStream responseBody = exchange.getResponseBody();
+        responseBody.write(message.getBytes());
+        responseBody.close();
+    }
+
     private void constructTextOutput(final Vector<ScoredDocument> docs, StringBuffer response) {
         for (ScoredDocument doc : docs) {
             response.append(response.length() > 0 ? "\n" : "");
@@ -200,6 +210,7 @@ class QueryHandler implements HttpHandler {
             switch (cgiArgs._outputFormat) {
             case TEXT:
                 constructTextOutput(scoredDocs, response);
+                respondWithMsg(exchange, response.toString());
                 break;
             case HTML:
             	response.append("<html><head></head>");
@@ -215,6 +226,7 @@ class QueryHandler implements HttpHandler {
             	}
                 response.append("</body>");
                 response.append("</html>");
+                respondWithHtmlMsg(exchange, response.toString());
                 break;
             default:
                 // nothing
@@ -225,7 +237,7 @@ class QueryHandler implements HttpHandler {
             ranker.computeQueryRep(scoredDocs, response, cgiArgs._numterms);
         }
         
-        respondWithMsg(exchange, response.toString());
+        //respondWithMsg(exchange, response.toString());
         System.out.println("Finished query: " + cgiArgs._query);
     }
 }
