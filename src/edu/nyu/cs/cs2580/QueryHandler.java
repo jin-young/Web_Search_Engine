@@ -202,7 +202,19 @@ class QueryHandler implements HttpHandler {
                 constructTextOutput(scoredDocs, response);
                 break;
             case HTML:
-                // @CS2580: Plug in your HTML output
+            	response.append("<html><head></head>");
+            	response.append("<body>");
+            	if(scoredDocs.size() > 0) {
+            		response.append("<ul>");
+            		for(ScoredDocument doc : scoredDocs) {
+            			response.append("<li>" + doc.asHtmlResult() + "</li>");
+            		}
+            		response.append("</ul>");
+            	} else {
+            		response.append("<h1>Sorry, we have nothing for your query. I owe you...</h1>");
+            	}
+                response.append("</body>");
+                response.append("</html>");
                 break;
             default:
                 // nothing

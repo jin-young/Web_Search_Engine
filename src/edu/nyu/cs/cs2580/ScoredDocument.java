@@ -36,7 +36,10 @@ class ScoredDocument implements Comparable<ScoredDocument> {
    * @CS2580: Student should implement {@code asHtmlResult} for final project.
    */
   public String asHtmlResult() {
-    return "";
+	String ret = "<a href='" + _doc.getUrl() + "'>";
+	ret += _doc.getTitle();
+	ret += "</a>";
+    return ret;
   }
 
   @Override
