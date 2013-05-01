@@ -1,0 +1,9 @@
+@CHARSET "UTF-8";
+
+.error{color:red;}
+#students th {text-align:center; background:#dddddd; border:1px solid #cccccc; cursor:default;}
+#students tr:hover {background: #bbbbbb; cursor:pointer;}
+#examtable {border:1px solid #333333;  background-color:#eeeeee; color:black; padding:5px;}
+#examtable th {text-align:center;  border-top-left-radius:5px; border-top-right-radius:5px; padding:3px; cursor:default;}
+td.answer {font-weight: bold;}
+td.wrong {color:red;font-weight: bold;}	

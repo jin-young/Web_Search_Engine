@@ -1,0 +1,29 @@
+@CHARSET "UTF-8";
+
+.error{color:red;}
+#students th {text-align:center; background:#dddddd; border:1px solid #cccccc; cursor:default;}
+#students tr:hover {background: #bbbbbb; cursor:pointer;}
+#examtable {border:1px solid #333333;  background-color:#eeeeee; color:black; padding:5px;}
+#examtable th {text-align:center;  border-top-left-radius:5px; border-top-right-radius:5px; padding:3px; cursor:default;}
+td.answer {font-weight: bold;}
+td.wrong {color:red;font-weight: bold;} 
+
+/* Blur Layer*/
+#blurLayer{
+	position:absolute;
+	left: 0px;
+	top: 0px;
+	width:100%; 
+	height:100%; 
+	background-color:#000000; 
+	filter:Alpha(opacity=30); 
+	opacity:0.3; 
+	-moz-opacity:0.3;
+	display: none;
+}
+
+#registerForm{
+	position:absolute;
+	z-index:3;
+	display:none;
+}
