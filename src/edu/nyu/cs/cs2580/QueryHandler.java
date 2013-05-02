@@ -213,20 +213,17 @@ class QueryHandler implements HttpHandler {
                 respondWithMsg(exchange, response.toString());
                 break;
             case HTML:
-            	response.append("<html><head></head>");
-            	response.append("<body>");
-            	if(scoredDocs.size() > 0) {
-            		response.append("<ul>");
-            		for(ScoredDocument doc : scoredDocs) {
-            			response.append("<li>" + doc.asHtmlResult() + "</li>");
-            		}
-            		response.append("</ul>");
-            	} else {
-            		response.append("<h1>Sorry, we have nothing for your query. I owe you...</h1>");
-            	}
-                response.append("</body>");
-                response.append("</html>");
-                respondWithHtmlMsg(exchange, response.toString());
+                                
+                response.append("var results=[");
+                for(int i=0; i<scoredDocs.size(); i++){
+                    ScoredDocument doc = scoredDocs.get(i);
+                    response.append("{\"url\":\"" + doc.asHtmlResult() + "\"}");
+                    if(i!=scoredDocs.size()-1)
+                        response.append(",");
+                }
+                response.append("];");
+                
+                //respondWithHtmlMsg(exchange, response.toString());
                 break;
             default:
                 // nothing
