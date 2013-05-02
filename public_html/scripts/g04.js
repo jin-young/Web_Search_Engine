@@ -64,5 +64,26 @@ function register(company, title, url, content, cost){
 	var path = root_url + "controllers/controller.php" + condition;
 	xmlhttp.open("GET", path, true);
 	xmlhttp.send(null);	
+}
 
+function getSearchResult(query){
+	xmlhttp = getInstance();
+	xmlhttp.onreadystatechange=function(){
+		if(xmlhttp.readyState == 4)
+		{
+			alert(xmlhttp.responseText);
+		}
+	}
+
+	var condition = "/search?";
+	condition += "query='" + query + "'";
+	condition += "&ranker=favorite";
+	condition += "&format=html";
+	var path = "localhost:25804" + condition;
+	xmlhttp.open("GET", path, true);
+	xmlhttp.send(null);	
+}
+
+function getAdsResult(query){
+	alert("ads : " + query);
 }
