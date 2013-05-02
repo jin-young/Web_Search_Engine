@@ -1,13 +1,10 @@
 package edu.nyu.cs.cs2580;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Scanner;
 import java.util.Vector;
 
+import com.google.gson.Gson;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -51,7 +48,7 @@ class QueryHandler implements HttpHandler {
         
         // The output format.
         public enum OutputFormat {
-            TEXT, HTML,
+            TEXT, HTML, JSON
         }
 
         public OutputFormat _outputFormat = OutputFormat.TEXT;
@@ -67,7 +64,11 @@ class QueryHandler implements HttpHandler {
                     continue;
                 }
                 String key = keyval[0].toLowerCase();
-                String val = keyval[1].toLowerCase();
+                //String val = keyval[1].toLowerCase();
+                //value should not be lowered because it could make unexpected result
+                //for example, CIMS, run stemmer after lowering cims becomes cim.
+                //however, running stemmer then lowering makes cims.
+                String val = keyval[1];
                 if (key.equals("query")) {
                     _query = val;
                 } else if (key.equals("num")) {
@@ -145,6 +146,16 @@ class QueryHandler implements HttpHandler {
         responseBody.write(message.getBytes());
         responseBody.close();
     }
+    
+    private void respondWithJsonMsg(HttpExchange exchange, final String message) throws IOException {
+        Headers responseHeaders = exchange.getResponseHeaders();
+        responseHeaders.set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, 0); // arbitrary number of
+        // bytes
+        OutputStream responseBody = exchange.getResponseBody();
+        responseBody.write(message.getBytes());
+        responseBody.close();
+    }    
 
     private void constructTextOutput(final Vector<ScoredDocument> docs, StringBuffer response) {
         for (ScoredDocument doc : docs) {
@@ -213,17 +224,27 @@ class QueryHandler implements HttpHandler {
                 respondWithMsg(exchange, response.toString());
                 break;
             case HTML:
-                                
-                response.append("var results=[");
-                for(int i=0; i<scoredDocs.size(); i++){
-                    ScoredDocument doc = scoredDocs.get(i);
-                    response.append("{\"url\":\"" + doc.asHtmlResult() + "\"}");
-                    if(i!=scoredDocs.size()-1)
-                        response.append(",");
-                }
-                response.append("];");
+            	response.append("<html><head></head>");
+            	response.append("<body>");
+            	if(scoredDocs.size() > 0) {
+            		response.append("<ul>");
+            		for(ScoredDocument doc : scoredDocs) {
+            			response.append("<li>" + doc.asHtmlResult() + "</li>");
+            		}
+            		response.append("</ul>");
+            	} else {
+            		response.append("<h1>Sorry, we have nothing for your query. I owe you...</h1>");
+            	}
+                response.append("</body>");
+                response.append("</html>");
+                respondWithHtmlMsg(exchange, response.toString());                
                 
-                //respondWithHtmlMsg(exchange, response.toString());
+                break;
+            case JSON:
+            	Gson gson = new Gson();
+            	response.append(gson.toJson(scoredDocs));
+                
+                respondWithJsonMsg(exchange, response.toString());
                 break;
             default:
                 // nothing

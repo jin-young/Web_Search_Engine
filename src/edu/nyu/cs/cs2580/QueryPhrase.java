@@ -16,6 +16,7 @@ public class QueryPhrase extends Query {
         if (_query == null)
             return;
         
+        //NOTE: TO NOT CALL toLower before stemming!!
         String word = new String();
         boolean isPhrase = false;
         for(int i=0; i<_query.length(); i++){
@@ -23,7 +24,7 @@ public class QueryPhrase extends Query {
                 if(!isPhrase && !word.isEmpty()){
                     _stemmer.setCurrent(word);
                     _stemmer.stem();
-                    _tokens.add(_stemmer.getCurrent());
+                    _tokens.add(_stemmer.getCurrent().toLowerCase());
                     word = "";                
                 }else if(isPhrase)
                     word += _query.charAt(i);
@@ -35,12 +36,13 @@ public class QueryPhrase extends Query {
                         _stemmer.setCurrent(scanner.next());
                         _stemmer.stem();
                         if(phrase.isEmpty())
-                            phrase = _stemmer.getCurrent();
+                            phrase = _stemmer.getCurrent().toLowerCase();
                         else
-                            phrase += " " + _stemmer.getCurrent();
+                            phrase += " " + _stemmer.getCurrent().toLowerCase();
                     }                    
                     _tokens.add(phrase);
                     word = "";
+                    scanner.close();
                 }
                 isPhrase = !isPhrase;
             }else{
@@ -50,7 +52,7 @@ public class QueryPhrase extends Query {
         if(!word.isEmpty()){
             _stemmer.setCurrent(word);
             _stemmer.stem();
-            _tokens.add(_stemmer.getCurrent());
+            _tokens.add(_stemmer.getCurrent().toLowerCase());
             word = "";
         }
     }

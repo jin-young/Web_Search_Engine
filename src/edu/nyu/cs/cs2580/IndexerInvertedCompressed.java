@@ -7,8 +7,10 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
@@ -61,7 +63,6 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         
         String[] words = phrase.split("\\s+");
         int firstId = _dictionary.get(words[0]);
-        
         Vector<Integer> candidates = null;
         
         for(String word : words) {
@@ -108,14 +109,16 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             //posting consist of (doc id, frequency, [positions])
             ArrayList<Integer> posting = retrivePosting(wordId, docId);
             if(posting != null && !posting.isEmpty()) {
-                for(int position : posting.subList(2, posting.size()-1)) {
-                    if(words.length == 1) {
-                        if(position - prevPosition == -1) {
-                            result = position;
-                        }
-                    } else {
-                        result = findPhraseInDoc(position, docId, Arrays.copyOfRange(words, 1, words.length), searchRange);
+                for(int position : posting.subList(2, posting.size())) {
+                   
+                    if(position - prevPosition == 1) {
+                    	 if(words.length == 1) {
+                    		 result = position;
+                    	 } else {
+                    		 result = findPhraseInDoc(position, docId, Arrays.copyOfRange(words, 1, words.length), searchRange);
+                    	 }
                     }
+                  
                     if(result > 0) {
                         break;
                     }
@@ -160,7 +163,181 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
         }
         return frequency;
     }
+    
+    private class Text implements Comparable<Text> {
+    	public int position=0;
+    	public String value=null;
+    	
+    	public Text(int position, String value) {
+    		this.position = position;
+    		this.value = value;
+    	}
 
+		@Override
+		public int compareTo(Text o) {
+			return position - o.position;
+		}
+    }
+
+	@Override
+    public Document nextDoc(Query query, int curDocId) {
+        Vector<Integer> _nextDocIds = new Vector<Integer>();
+        int nextDocId = -1;
+
+        // find next document for each query
+        for (String token : query._tokens) {
+            try {
+                if (token.contains(" "))
+                    nextDocId = nextPhrase(token, curDocId);
+                else
+                    nextDocId = next(token, curDocId);
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            } 
+            if (nextDocId == -1) return null;
+            _nextDocIds.add(nextDocId);
+        }
+        // found!
+        if (equal(_nextDocIds)) {
+        	Document doc = getDoc(_nextDocIds.get(0));
+        	
+        	File targetFile = new File(doc.getUrl());
+        	
+        	String content = getFileContent(targetFile);
+        	
+        	String[] words = content.split("\\s+");
+        	
+        	TreeMap<Integer, String> positions = new TreeMap<Integer, String>();
+        	
+	    	for (String token : query._tokens) {
+	    		if (token.contains(" ")) {
+	    			String[] terms = token.split("\\s+");
+	    			
+	    			int wordId = _dictionary.get(terms[0]);
+	    			List<Integer> termPositions = retrivePosting(wordId, doc._docid);
+	    			//remove doc id and frequency
+	    			termPositions = termPositions.subList(2, termPositions.size());
+	    			
+	    			for(int position : termPositions) {
+	    				int offset = 0;
+	    				if(position <= (words.length - terms.length)) {
+	        				boolean found = true;
+	        				for(String term: terms) {
+	        					String w = trimPunctuation(words[position + offset - 1]).toLowerCase();
+	        					if(!term.equals(w)) {
+	        						found = false;
+	        						break;
+	        					}
+	        					offset += 1;
+	        				}
+	        				if(found) {
+	        					positions.put(position, token);
+	        				}
+	    				} else {
+	    					break;
+	    				}
+	    			}
+	    		} else {
+	    			List<Integer> termPositions = retrivePosting(_dictionary.get(token), doc._docid);
+	    			//remove doc id and frequency
+	    			termPositions = termPositions.subList(2, termPositions.size());
+	    			
+	    			for(int position : termPositions) {
+	    				positions.put(position, token);
+	    			}
+				}
+			}
+	    	
+	    	List<Text> closestPosition = new ArrayList<Text>();
+	    	int minDistance = Integer.MAX_VALUE;
+	    	
+        	for(Integer position : positions.keySet()) {
+        		String currentTerm = positions.get(position);
+        		int existIndex = -1;
+        		for(int idx = 0; idx < closestPosition.size(); idx++) {
+					if(closestPosition.get(idx).value.equals(currentTerm)) {
+						existIndex = idx;
+        				break;
+        			}
+        		}
+        		
+        		if(existIndex >= 0) {
+        			if(closestPosition.size() == query._tokens.size()) {
+        				int distance = 0;
+        				int prevPosition = -1;
+        				if(existIndex == 0) {
+        					prevPosition = closestPosition.get(1).position;
+        					
+	        				for(int idx = 2; idx < closestPosition.size(); idx++) {
+	        					distance += closestPosition.get(idx).position - prevPosition;
+	        					prevPosition = closestPosition.get(idx).position;
+	        				}
+        				} else {
+        					prevPosition = closestPosition.get(0).position;
+        					
+        					for(int idx = 1; idx < closestPosition.size(); idx++) {
+        						if(idx != existIndex) {
+        							distance += closestPosition.get(idx).position - prevPosition;
+        							prevPosition = closestPosition.get(idx).position;
+        						}
+	        				}
+        				}
+        				distance += position - prevPosition;
+        				
+        				if(distance < minDistance) {
+        					minDistance = distance;
+        					Text removed = closestPosition.remove(existIndex);
+        					removed.position = position;
+        					closestPosition.add(removed);
+        				}
+        			} else {
+        				//not fulled yet. Just replace
+    					Text removed = closestPosition.remove(existIndex);
+    					removed.position = position;
+    					closestPosition.add(removed);
+        			}
+        		} else {
+        			//new one must be added
+        			closestPosition.add(new Text(position, currentTerm));
+        			
+        			if(query._tokens.size() == 1) break;
+        		}
+        	}
+	    	
+        	/*
+	    	System.out.print("Doc: " + doc._docid + "/" + doc.getUrl() + " ");
+	    	for(Text t : closestPosition) {
+	    		System.out.print(t.value + ":" + Integer.toString(t.position) + " ");
+	    	}
+	    	System.out.println();
+	    	*/
+        	
+        	for(Text t : closestPosition) {
+	    		int start_idx = t.position - 3; 
+	    		//don't forget. Array starts from 0.
+	    		start_idx = (start_idx < 1) ? 0 : start_idx - 1;
+	    		
+	    		int end_idx = t.position + 10;
+	    		end_idx = (end_idx > words.length) ? words.length-1 : end_idx - 1;
+	    		
+	    		String sentence = "";
+	    		for(int idx = start_idx; idx <= end_idx; idx++) {
+	    			if(idx < end_idx)
+	    				sentence += words[idx] + " ";
+	    			else
+	    				sentence += words[idx];
+	    		}
+	    		if(end_idx < words.length - 1) sentence += "... ";
+	    		
+	    		doc.addDisplaySentence(sentence);
+	    	}
+        	
+        	return doc;
+        }
+        // search next
+        return nextDoc(query, Max(_nextDocIds) - 1);
+    }     
+    
     /**
      * Document Term Frequency
      * @param : String term, String url
@@ -258,7 +435,12 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
             if (i > skipInfo.size())
                 return null; // we could not find given doc
             
-            int startPosition = skipInfo.get(i + 1);
+            
+            int startPosition = 0;
+            
+            if(i > 0) {
+            	startPosition = skipInfo.get(i - 1);
+            }
             
             ArrayList<Short> postingList = getPostingList(wordId);
             ArrayList<Integer> result = ByteAlignUtil.getPosting(startPosition, postingList);
@@ -746,6 +928,7 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
             _stemmer.setCurrent(term);
             _stemmer.stem();
+            
             String token = _stemmer.getCurrent().toLowerCase();
             int postingId = -1;
 

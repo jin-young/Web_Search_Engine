@@ -4,7 +4,9 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -77,6 +79,7 @@ class Document implements Serializable {
   // Basic information for display
   private String _title = "";
   private String _url = "";
+  private List<String> texts2Display = null;
 
   // Basic information for ranking
   private float _pageRank = 0.0f;
@@ -116,5 +119,20 @@ class Document implements Serializable {
 
   public void setNumViews(int numViews) {
     this._numViews = numViews;
+  }
+  
+  public void addDisplaySentence(String txt) {
+	  if(texts2Display == null) {
+		  texts2Display = new ArrayList<String>();
+	  }
+	  texts2Display.add(txt);
+  } 
+
+  public String getTextToDisplay() {
+	  String ret = "";
+	  for(String txt : texts2Display) {
+		  ret += txt;
+	  }
+      return ret;
   }
 }

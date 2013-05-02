@@ -34,7 +34,7 @@ public class Query {
             _stemmer.setCurrent(q);
             _stemmer.stem();
             q = _stemmer.getCurrent();
-            _tokens.add(q);
+            _tokens.add(q.toLowerCase());
         }
         s.close();
     }

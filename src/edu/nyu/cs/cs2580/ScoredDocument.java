@@ -37,7 +37,12 @@ class ScoredDocument implements Comparable<ScoredDocument> {
    */
   public String asHtmlResult() {
 	String ret = "<a href='/transfer?redirect_to=" + _doc.getUrl() + "'>";
+	ret += "<div>";
 	ret += _doc.getTitle();
+	ret += "</div>";
+	ret += "<div>";
+	ret += _doc.getTextToDisplay();
+	ret += "</div>";
 	ret += "</a>";
     return ret;
   }
