@@ -14,10 +14,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
+
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -481,5 +484,11 @@ public class IndexerInvertedOccurrence extends IndexerCommon implements
             docMap = getDocMap(idx);
         }
 		return docMap.get(docid).size();
+	}
+
+	@Override
+	public List<Integer> getTermPositions(int wordId, int docId) {
+		//return positions of the given word in the given document
+		throw new NotImplementedException();
 	}
 }

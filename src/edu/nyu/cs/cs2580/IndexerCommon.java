@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -98,6 +99,21 @@ public abstract class IndexerCommon extends Indexer {
         String indexPrefix = _options._indexPrefix + "/index_";
         return indexPrefix + String.format("%02d", idx) + ".idx";
     }
+    
+    public Map<String, Integer> getDictionary() {
+    	return _dictionary;
+    }
+    
+    public static String trimPunctuation(String term) {
+        // remove puncs in tail
+        term = term.replaceAll("(.+)\\p{Punct}(\\s|$)", "$1$2");
+        // remove puncs in head
+        term = term.replaceAll("^\\p{Punct}(.+)(\\s|$)", "$1$2");
+
+        return term;
+    }
+    
+    public abstract List<Integer> getTermPositions(int wordId, int docId);
 
     protected abstract void mergePartialIndex(int lastRound);
 

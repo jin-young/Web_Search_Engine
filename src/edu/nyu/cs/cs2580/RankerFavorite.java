@@ -1,12 +1,11 @@
 package edu.nyu.cs.cs2580;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.Vector;
-import java.util.Collections;
-import java.util.PriorityQueue;
-import java.util.Queue;
+
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -25,40 +24,42 @@ public class RankerFavorite extends Ranker {
 
     @Override
     public Vector<ScoredDocument> runQuery(Query query, int numResults) {
-        Vector<ScoredDocument> rankList = new Vector<ScoredDocument>();
-        Vector<DocumentIndexed> docList = new Vector<DocumentIndexed>();
+    	TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
+    	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
         
         DocumentIndexed doc = null;
         int docid = -1;
+        
         while ((doc = (DocumentIndexed) _indexer.nextDoc(query, docid)) != null) {
-
-            if (!docList.contains(doc)) {
+        	docid = doc._docid;
+            if (!docIds.contains(doc._docid)) {
                 
+            	ScoredDocument newOne = scoreDocument(query, doc);
+            	
+            	if (rankList.size() >= numResults) { 
+            		ScoredDocument currentMinScoreDoc = rankList.first();
+            		if(currentMinScoreDoc.getScore() < newOne.getScore()) {
+            			rankList.pollFirst();
+            			docIds.remove(currentMinScoreDoc.getDocId());
+            		} else {
+            			//ignore new one
+            			continue;
+            		}
+            	}
+            	
                 rankList.add(scoreDocument(query, doc));
-                docList.add(doc);
-
-                if (rankList.size() > numResults) {
-                    double minValue = rankList.get(0).getScore();
-                    int id = 0;
-                    for (int i = 1; i < rankList.size(); i++) {
-                        if (rankList.get(i).getScore() < minValue) {
-                            minValue = rankList.get(i).getScore();
-                            id = i;
-                        }
-                    }
-                    rankList.remove(id);
-                    docList.remove(id);
-                }
+                docIds.add(doc._docid);
             }
-            docid = doc._docid;
         }
 
         Vector<ScoredDocument> results = new Vector<ScoredDocument>();
-        ScoredDocument scoredDoc = null;
-        for (int i = 0; i < rankList.size(); i++) {
-            results.add(rankList.get(i));
+        Iterator<ScoredDocument> it = rankList.descendingIterator();
+        while(it.hasNext()) {
+        	ScoredDocument sd = it.next();
+        	sd.loadSTextToDisplay(query, (IndexerCommon)_indexer);
+        	results.add(sd);
         }
-        Collections.sort(results, Collections.reverseOrder());
+        
         return results;
     }
 

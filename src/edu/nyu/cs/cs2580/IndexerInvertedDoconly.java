@@ -11,10 +11,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Vector;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 /**
@@ -273,6 +275,8 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	            Scanner scan = new Scanner(query._tokens.get(i));
 	            while(scan.hasNext())
 	                query._tokens.add( scan.next() );
+	            
+	            scan.close();
 	        }
 	    }
 	    
@@ -350,5 +354,11 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		return 1;
+	}
+
+	@Override
+	public List<Integer> getTermPositions(int wordId, int docId) {
+		//return positions of the given word in the given document
+		throw new NotImplementedException();
 	}
 }
