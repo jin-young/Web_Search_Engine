@@ -261,12 +261,10 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     // ///////////////////////////////////////////////////////////////////////////////////////
     
     protected Vector<Integer> retriveDocList(String word) {
-        Object result = _dictionary.get(word);
         
         Vector<Integer> docList = new Vector<Integer>();
-
-        if(result != null) {
-            int idx = ((Integer)result).intValue();
+        if(_dictionary.get(word) != null) {
+            int idx = _dictionary.get(word);
             for (int i = 0; i < getSkipInfo(idx).size(); i = i + 2) {
                 docList.add(getSkipInfo(idx).get(i));
             }

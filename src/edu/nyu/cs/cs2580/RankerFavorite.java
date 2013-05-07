@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.util.concurrent.CountDownLatch;
 
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -47,18 +48,42 @@ public class RankerFavorite extends Ranker {
             		}
             	}
             	
-                rankList.add(scoreDocument(query, doc));
+                rankList.add(newOne);
                 docIds.add(doc._docid);
             }
         }
 
         Vector<ScoredDocument> results = new Vector<ScoredDocument>();
         Iterator<ScoredDocument> it = rankList.descendingIterator();
+        
+        CountDownLatch doneSignal = new CountDownLatch(rankList.size());
         while(it.hasNext()) {
         	ScoredDocument sd = it.next();
-        	sd.loadSTextToDisplay(query, (IndexerCommon)_indexer);
         	results.add(sd);
+        	new Thread() {
+        		private Query query;
+        		private ScoredDocument sd;
+        		private IndexerCommon indexer;
+        		private CountDownLatch latch;
+        		
+        		public void run() { 
+        			sd.loadSTextToDisplay(query, indexer);
+        			latch.countDown();
+        		}
+        		private Thread init(ScoredDocument sd, Query query, IndexerCommon indexer, CountDownLatch latch) {
+        			this.sd = sd;
+        			this.query = query;
+        			this.indexer = indexer;
+        			this.latch = latch;
+        			return this;
+        		}
+        	}.init(sd, query, (IndexerCommon)_indexer, doneSignal).start();
         }
+        try {
+			doneSignal.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
         
         return results;
     }
