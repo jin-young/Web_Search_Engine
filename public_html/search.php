@@ -17,31 +17,12 @@
   	
   	$json_url = 'http://localhost:25804/search?query=' . $query . '&format=json&ranker=favorite';
      
-    // Initializing curl
-    $ch = curl_init( $json_url );
-     
-    // Configuring curl options
-    $options = array(
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_HTTPHEADER => array('Content-type: application/json') ,
-    );
-     
-    // Setting curl options
-    curl_setopt_array( $ch, $options );
-     
     // Getting results
-    $result =  curl_exec($ch); // Getting jSON result string
+    $result =  file_get_contents($json_url); // Getting jSON result string
     $json_output = json_decode($result, true);
   } else {
   
   }
-	
-	/*
-	echo '<script type="text/javascript">
-			getSearchResult('.$query.');
-			getAdsResult('.$query.');
-		  </script>';
-	*/
 ?>
 
 </head>	
