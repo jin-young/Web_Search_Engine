@@ -146,7 +146,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
         File f = new File(_options._corpusPrefix + "/" + fileName);
         org.jsoup.nodes.Element body;
         try {
-            body = Jsoup.parse(f, "UTF-8", _options._corpusPrefix + "/" + fileName).body();
+            body = Jsoup.parse(f, "UTF-8",  _options._corpusPrefix + "/" + fileName).body();
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Error during anchor gathering");

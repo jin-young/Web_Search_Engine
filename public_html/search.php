@@ -12,22 +12,31 @@
 <?php 
 	$query = str_replace(' ', '%20',$_GET["query"]);
 	$query = str_replace('"', '%22', $query);
+	/*
 	echo '<script type="text/javascript">
 			getSearchResult('.$query.');
 			getAdsResult('.$query.');
 		  </script>';
+	*/
 ?>
 
 </head>	
 <body>
 	<div>
-		<a href="main.html"><img align="absmiddle" width="100" height="30"
-			src="./image/google.png"></a> <input type="text" name="query"
-			style="width: 600; height:30" /> <img align="absmiddle" width="100" height="30"
-			src="./image/searchbutton.png">
+		<a href="main.html"> <img align="absmiddle" width="100" height="30" src="./image/google.png"> </a> 
+		<input type="text" name="query" style="width: 600; height:30" /> 
+		<img align="absmiddle" width="100" height="30" src="./image/searchbutton.png">
 	</div>
 	<hr />
 	<?php echo $query; ?>
-	<div id="result_body"></div>
+	<div id="result_body">
+		<!-- convert Json into html format -->
+		<?php 
+			$ch = curl_init("http://localhost:25804/search?query=bing&ranker=favorite&format=html");
+			$output = curl_exec($ch);
+			curl_close($ch);
+			echo $output;
+		?>
+	</div>
 </body>
 </html>
