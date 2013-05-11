@@ -167,12 +167,20 @@ public abstract class IndexerCommon extends Indexer {
         // content = removeNonVisible(content);
 
         DocumentIndexed doc = new DocumentIndexed(did);
-        doc.setTitle(file.getName());
+        
+        String title = file.getName();
+        try {
+			title = Jsoup.parse(file, "UTF-8", _options._corpusPrefix + "/" + file.getName()).title();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+        
+        doc.setTitle(title);
         doc.setUrl(_options._corpusPrefix + "/" + file.getName());
         doc.setTokenSize(tokenSize);
         
-        doc.setNumViews(numViews.get(doc.getTitle()).getNumViews());
-        doc.setPageRank(numViews.get(doc.getTitle()).getPageRank());
+        doc.setNumViews(numViews.get(file.getName()).getNumViews());
+        doc.setPageRank(numViews.get(file.getName()).getPageRank());
         
         _documents.put(file.getName(), doc);
         ++_numDocs;        

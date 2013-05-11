@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Vector;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 /**
@@ -359,6 +358,6 @@ public class IndexerInvertedDoconly extends IndexerCommon implements
 	@Override
 	public List<Integer> getTermPositions(int wordId, int docId) {
 		//return positions of the given word in the given document
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 }
