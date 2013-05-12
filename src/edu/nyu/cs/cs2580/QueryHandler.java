@@ -2,6 +2,8 @@ package edu.nyu.cs.cs2580;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Vector;
 
 import com.google.gson.Gson;
@@ -212,15 +214,22 @@ class QueryHandler implements HttpHandler {
         processedQuery.processQuery();
 
         // Ranking.
-        Vector<ScoredDocument> scoredDocs = null;
+        //Vector<ScoredDocument> scoredDocs = null;
+        ScoredDocs scoredDocs = new ScoredDocs();
         StringBuffer response = new StringBuffer();
         
         if(uriPath.equals("/search")){      // Search Mode
             System.out.println("Search Processing ...");
-            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numResults);
+            //scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numResults);
+            long start = System.currentTimeMillis();
+            ranker.runQuery(processedQuery, cgiArgs._numResults, scoredDocs);
+            long end = System.currentTimeMillis();
+            NumberFormat formatter = new DecimalFormat("#0.00000");
+            scoredDocs.set_run_time(formatter.format((end - start) / 1000d));
+            
             switch (cgiArgs._outputFormat) {
             case TEXT:
-                constructTextOutput(scoredDocs, response);
+                constructTextOutput(scoredDocs.getScoredDocs(), response);
                 respondWithMsg(exchange, response.toString());
                 break;
             case HTML:
@@ -228,7 +237,7 @@ class QueryHandler implements HttpHandler {
             	response.append("<body>");
             	if(scoredDocs.size() > 0) {
             		response.append("<ul>");
-            		for(ScoredDocument doc : scoredDocs) {
+            		for(ScoredDocument doc : scoredDocs.getScoredDocs()) {
             			response.append("<li>" + doc.asHtmlResult() + "</li>");
             		}
             		response.append("</ul>");
@@ -242,6 +251,7 @@ class QueryHandler implements HttpHandler {
                 break;
             case JSON:
             	Gson gson = new Gson();
+            	
             	response.append(gson.toJson(scoredDocs));
                 
                 respondWithJsonMsg(exchange, response.toString());
@@ -251,8 +261,8 @@ class QueryHandler implements HttpHandler {
             }
         }else if(uriPath.equals("/prf")){       // Pseudo-Relevance Feedback Mode
             System.out.println("PRF Processing ...");
-            scoredDocs = ranker.runQuery(processedQuery, cgiArgs._numdocs);
-            ranker.computeQueryRep(scoredDocs, response, cgiArgs._numterms);
+            Vector<ScoredDocument> sds = ranker.runQuery(processedQuery, cgiArgs._numdocs);
+            ranker.computeQueryRep(sds, response, cgiArgs._numterms);
         }
         
         //respondWithMsg(exchange, response.toString());

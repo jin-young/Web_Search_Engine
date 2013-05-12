@@ -23,10 +23,20 @@ public class RankerConjunctive extends Ranker {
 
 	@Override
 	public Vector<ScoredDocument> runQuery(Query query, int numResults) {
+    	ScoredDocs scoredDocs = new ScoredDocs();
+    	runQuery(query, numResults, scoredDocs);
+        
+    	return scoredDocs.getScoredDocs();
+	}
+
+	@Override
+	public void runQuery(Query query, int numResults, ScoredDocs scoredDocs) {
 		Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();
 		Document doc = null;
 		int docid = -1;
+		long count = 0;
 		while ((doc = _indexer.nextDoc(query, docid)) != null) {
+			count++;
 			rankQueue.add(new ScoredDocument(doc, 1.0));
 			if (rankQueue.size() > numResults) {
 				rankQueue.poll();
@@ -34,12 +44,12 @@ public class RankerConjunctive extends Ranker {
 			docid = doc._docid;
 		}
 
-		Vector<ScoredDocument> results = new Vector<ScoredDocument>();
 		ScoredDocument scoredDoc = null;
 		while ((scoredDoc = rankQueue.poll()) != null) {
-			results.add(scoredDoc);
+			scoredDocs.add(scoredDoc);
 		}
-		Collections.sort(results, Collections.reverseOrder());
-		return results;
+		scoredDocs.set_num_of_result(count);
+		
+		Collections.sort(scoredDocs.getScoredDocs(), Collections.reverseOrder());
 	}
 }

@@ -41,14 +41,18 @@
 	<hr />
   <div id="main" style="padding: 10px; margin-left: 10px">
     <div id="peformance_summarny" style="margin-bottom: 5px">
-      About 140,000,000 results (0.30 seconds) &lt- this is fake. It will be update to real data in the future. ha ha.
+      <?php 
+        if($v) {
+          echo $json_output["_num_of_result"] . " results (" . $json_output["_run_time"] . " seconds)";
+        }
+      ?>
     </div>
     <div id="result_list" style="width: 60%; float: left">
 	    <!-- convert Json into html format -->
 	    <?php
 	      if($v) {
 	        echo "Showing results for <b>" . $v . "</b><br/><br/>";
-	        foreach ( $json_output as $record ) {
+	        foreach ( $json_output["_sDocs"] as $record ) {
       ?>
         <div style="margin-bottom: 10px">
           <font size="4em"><a href="<?php echo ''; ?>"><?php echo $record["_doc"]["_title"]; ?></a></font><br/>

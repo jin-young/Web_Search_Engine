@@ -24,68 +24,11 @@ public class RankerFavorite extends Ranker {
     }
 
     @Override
-    public Vector<ScoredDocument> runQuery(Query query, int numResults) {
-    	TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
-    	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
+    public Vector<ScoredDocument> runQuery(Query query, int numResults) {    	
+    	ScoredDocs scoredDocs = new ScoredDocs();
+    	runQuery(query, numResults, scoredDocs);
         
-        DocumentIndexed doc = null;
-        int docid = -1;
-        
-        while ((doc = (DocumentIndexed) _indexer.nextDoc(query, docid)) != null) {
-        	docid = doc._docid;
-            if (!docIds.contains(doc._docid)) {
-                
-            	ScoredDocument newOne = scoreDocument(query, doc);
-            	
-            	if (rankList.size() >= numResults) { 
-            		ScoredDocument currentMinScoreDoc = rankList.first();
-            		if(currentMinScoreDoc.getScore() < newOne.getScore()) {
-            			rankList.pollFirst();
-            			docIds.remove(currentMinScoreDoc.getDocId());
-            		} else {
-            			//ignore new one
-            			continue;
-            		}
-            	}
-            	
-                rankList.add(newOne);
-                docIds.add(doc._docid);
-            }
-        }
-
-        Vector<ScoredDocument> results = new Vector<ScoredDocument>();
-        Iterator<ScoredDocument> it = rankList.descendingIterator();
-        
-        CountDownLatch doneSignal = new CountDownLatch(rankList.size());
-        while(it.hasNext()) {
-        	ScoredDocument sd = it.next();
-        	results.add(sd);
-        	new Thread() {
-        		private Query query;
-        		private ScoredDocument sd;
-        		private IndexerCommon indexer;
-        		private CountDownLatch latch;
-        		
-        		public void run() { 
-        			sd.loadSTextToDisplay(query, indexer);
-        			latch.countDown();
-        		}
-        		private Thread init(ScoredDocument sd, Query query, IndexerCommon indexer, CountDownLatch latch) {
-        			this.sd = sd;
-        			this.query = query;
-        			this.indexer = indexer;
-        			this.latch = latch;
-        			return this;
-        		}
-        	}.init(sd, query, (IndexerCommon)_indexer, doneSignal).start();
-        }
-        try {
-			doneSignal.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-        
-        return results;
+        return scoredDocs.getScoredDocs();
     }
 
     private ScoredDocument scoreDocument(Query query, DocumentIndexed doc) {
@@ -110,4 +53,71 @@ public class RankerFavorite extends Ranker {
         }
         return score;
     }
+
+	@Override
+	public void runQuery(Query query, int numResults, ScoredDocs scoredDocs) {
+		TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
+    	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
+        
+        DocumentIndexed doc = null;
+        int docid = -1;
+        
+        long count = 0;
+        while ((doc = (DocumentIndexed) _indexer.nextDoc(query, docid)) != null) {
+        	docid = doc._docid;
+        	count++;
+            if (!docIds.contains(doc._docid)) {
+                
+            	ScoredDocument newOne = scoreDocument(query, doc);
+            	
+            	if (rankList.size() >= numResults) { 
+            		ScoredDocument currentMinScoreDoc = rankList.first();
+            		if(currentMinScoreDoc.getScore() < newOne.getScore()) {
+            			rankList.pollFirst();
+            			docIds.remove(currentMinScoreDoc.getDocId());
+            		} else {
+            			//ignore new one
+            			continue;
+            		}
+            	}
+            	
+                rankList.add(newOne);
+                docIds.add(doc._docid);
+            }
+        }
+
+        //ScoredDocs scoredDocs = new ScoredDocs();
+        scoredDocs.set_num_of_result(count);
+        Iterator<ScoredDocument> it = rankList.descendingIterator();
+        
+        CountDownLatch doneSignal = new CountDownLatch(rankList.size());
+        while(it.hasNext()) {
+        	ScoredDocument sd = it.next();
+        	scoredDocs.add(sd);
+        	new Thread() {
+        		private Query query;
+        		private ScoredDocument sd;
+        		private IndexerCommon indexer;
+        		private CountDownLatch latch;
+        		
+        		public void run() { 
+        			sd.loadSTextToDisplay(query, indexer);
+        			latch.countDown();
+        		}
+        		private Thread init(ScoredDocument sd, Query query, IndexerCommon indexer, CountDownLatch latch) {
+        			this.sd = sd;
+        			this.query = query;
+        			this.indexer = indexer;
+        			this.latch = latch;
+        			return this;
+        		}
+        	}.init(sd, query, (IndexerCommon)_indexer, doneSignal).start();
+        }
+        try {
+			doneSignal.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+        //return scoredDocs;
+	}
 }

@@ -64,6 +64,8 @@ public abstract class Ranker {
      */
     public abstract Vector<ScoredDocument> runQuery(Query query, int numResults);
     
+    public abstract void runQuery(Query query, int numResults, ScoredDocs scoredDocs);
+    
     /**
      * Compute Query Representations for PRF mode
      * @param docs
