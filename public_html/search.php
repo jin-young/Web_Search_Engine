@@ -55,7 +55,7 @@
 	        foreach ( $json_output["_sDocs"] as $record ) {
       ?>
         <div style="margin-bottom: 10px">
-          <font size="4em"><a href="<?php echo ''; ?>"><?php echo $record["_doc"]["_title"]; ?></a></font><br/>
+          <font size="4em"><a href="<?php echo $record["_doc"]["_url"]; ?>"><?php echo $record["_doc"]["_title"]; ?></a></font><br/>
           <font style="color:green"><?php echo $record["_doc"]["_url"]; ?></font><br/>
           <?php
             foreach ( $record["_doc"]["texts2Display"] as $snippet ) {
