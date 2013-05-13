@@ -63,6 +63,11 @@ public class SearchEngine {
 		// The specific LogMiner to be used.
 		public String _logMinerType = null;
 
+		// fields for database connection
+		public String _addbname = "";
+		public String _addbuser = "";
+		public String _addbpwd = "";
+
 		/**
 		 * Constructor for options.
 		 * 
@@ -108,6 +113,14 @@ public class SearchEngine {
 
 			_logMinerType = options.get("log_miner_type");
 			Check(_logMinerType != null, "Missing option: log_miner_type!");
+			
+			_addbname = options.get("ad_db_name");
+			Check(_addbname != null, "Missing option: database name for ad!");
+			
+			_addbuser = options.get("ad_db_user");
+			Check(_addbuser != null, "Missing option: user id for accessing ad db!");
+			
+			_addbpwd = options.get("ad_db_pwd") != null ? options.get("ad_db_pwd") : "";
 		}
 	}
 
