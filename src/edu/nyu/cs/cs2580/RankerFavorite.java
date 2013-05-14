@@ -18,6 +18,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class RankerFavorite extends Ranker {
 	private AdIndexer _adIndexer = null;
+	
     public RankerFavorite(Options options, CgiArguments arguments, Indexer indexer) {
         super(options, arguments, indexer);
         _adIndexer = new AdIndexer(options);
@@ -127,11 +128,100 @@ public class RankerFavorite extends Ranker {
         //return scoredDocs;
 	}
 	
+	/**
+     * Make ScoreDocument for Ad
+     * @param query
+     * @param doc
+     * @return ScoredDocument
+     */
+    private ScoredDocument scoreDocumentForAd(Query query, AdDocumentIndexed doc, long totalClick) {
+        double score = calScoreForAd(query, doc, totalClick);
+        return new ScoredDocument(doc, score);
+    }
+
+    /**
+     * Total number of clicks in ads that have same query
+     * @return
+     */
+    private long totalClickSameQuery(Query query){
+        long total = 1;
+        /*
+        Connection con = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        long total = 0;
+        try {
+            con = DriverManager
+                    .getConnection(connectionString, userId, userPwd);
+            stmt = con.createStatement();
+            rs = stmt.executeQuery("SELECT id, title, url, content, cost FROM ads_info");
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String title = rs.getString("title");
+                String url = rs.getString("url");
+                String content = rs.getString("content");
+                double cost = rs.getDouble("cost");
+                
+                processDocument(id, title, url, content, cost);
+            }
+            
+            writeToFile(0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (Exception e) {
+                }
+            }
+        }
+        return total;
+        */
+        return total;
+    }
+    
+    /**
+     * Calculate Score for Ad
+     * @param query
+     * @param doc
+     * @return score
+     */
+    public double calScoreForAd(Query query, AdDocumentIndexed doc, long totalClick) {
+        double weight_a=0.5, weight_b=0.5, weight_c=0.5, weight_d=0.5;
+        double weight_title = 3;
+                
+        double opt1 = ( doc.getNumViews() / totalClick ) * weight_a; 
+                        
+        double score = doc.getCost() * (opt1 );  
+        
+        return score;
+        
+        /*
+        double score = 1.0, lambda = 0.50;
+        // Vector<String> docTokens = ((DocumentFull)
+        // doc).getConvertedTitleTokens();
+        // docTokens.addAll( ((DocumentFull) doc).getConvertedBodyTokens() );
+        int docTokenSize = doc.getTokenSize();
+
+        // Score the document.
+        for (String queryToken : query._tokens) {
+            score *= ((1 - lambda) * (_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
+                            * ((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
+                                            .totalTermFrequency()));
+        }
+        return score;
+        */
+    }
+    
 	@Override
 	public void runQueryForAd(Query query, int numResults, ScoredDocs scoredAdDocs) {
 		TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
     	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
         
+    	long totalClick =totalClickSameQuery(query); 
+    	
         AdDocumentIndexed doc = null;
         int docid = -1;
         
@@ -141,7 +231,7 @@ public class RankerFavorite extends Ranker {
         	count++;
             if (!docIds.contains(doc._docid)) {
                 
-            	ScoredDocument newOne = scoreDocument(query, doc);
+            	ScoredDocument newOne = scoreDocumentForAd(query, doc, totalClick);
             	
             	if (rankList.size() >= numResults) { 
             		ScoredDocument currentMinScoreDoc = rankList.first();

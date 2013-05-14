@@ -54,15 +54,16 @@ public class AdIndexer extends IndexerInvertedCompressed {
 			con = DriverManager
 					.getConnection(connectionString, userId, userPwd);
 			stmt = con.createStatement();
-			rs = stmt.executeQuery("SELECT id, title, url, content FROM ads_info");
+			rs = stmt.executeQuery("SELECT id, title, url, content, cost FROM ads_info");
 
 			while (rs.next()) {
 				int id = rs.getInt("id");
 				String title = rs.getString("title");
 				String url = rs.getString("url");
 				String content = rs.getString("content");
+				double cost = rs.getDouble("cost");
 
-				processDocument(id, title, url, content);
+				processDocument(id, title, url, content, cost);
 			}
 			
 			writeToFile(0);
@@ -85,7 +86,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 	 * you need to dynamically determine whether to drop the processing of a
 	 * certain inverted list.
 	 */
-	public void processDocument(int did, String title, String url, String content) {
+	public void processDocument(int did, String title, String url, String content, double cost) {
 		System.out.println(did + ". " + title);
 
 		int tokenSize = 0;
@@ -101,6 +102,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 		doc.setUrl(url);
 		doc.setTokenSize(tokenSize);
 		doc.setKeywords(content);
+		doc.setCost(cost);
 
 		// doc.setNumViews(numViews.get(file.getName()).getNumViews());
 		// doc.setPageRank(numViews.get(file.getName()).getPageRank());
