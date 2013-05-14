@@ -120,4 +120,40 @@ public class RankerFavorite extends Ranker {
 		}
         //return scoredDocs;
 	}
+	
+	@Override
+	public void runQueryForAd(Query query, int numResults, ScoredDocs scoredAdDocs) {
+		TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
+    	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
+        
+        AdDocumentIndexed doc = null;
+        int docid = -1;
+        AdIndexer adIndexer = new AdIndexer(_options);
+        long count = 0;
+        while ((doc = (AdDocumentIndexed) adIndexer.nextDoc(query, docid)) != null) {
+        	docid = doc._docid;
+        	count++;
+            if (!docIds.contains(doc._docid)) {
+                
+            	ScoredDocument newOne = scoreDocument(query, doc);
+            	
+            	if (rankList.size() >= numResults) { 
+            		ScoredDocument currentMinScoreDoc = rankList.first();
+            		if(currentMinScoreDoc.getScore() < newOne.getScore()) {
+            			rankList.pollFirst();
+            			docIds.remove(currentMinScoreDoc.getDocId());
+            		} else {
+            			//ignore new one
+            			continue;
+            		}
+            	}
+            	
+                rankList.add(newOne);
+                docIds.add(doc._docid);
+            }
+        }
+
+        //ScoredDocs scoredDocs = new ScoredDocs();
+        scoredAdDocs.set_num_of_result(count);
+	}	
 }

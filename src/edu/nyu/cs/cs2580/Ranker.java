@@ -180,5 +180,7 @@ public abstract class Ranker {
 			}
 			return null;
 		}
-	}  
+	}
+
+	public abstract void runQueryForAd(Query processedQuery, int _numResults, ScoredDocs scoredAdDocs);
 }

@@ -67,4 +67,10 @@ class RankerQL extends Ranker {
 		}
 		scoredDocs.set_num_of_result(count);
 	}
+	
+	@Override
+	public void runQueryForAd(Query processedQuery, int _numResults,
+			ScoredDocs scoredAdDocs) {
+		throw new UnsupportedOperationException("should be implemented first");
+	}	
 }

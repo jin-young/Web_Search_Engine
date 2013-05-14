@@ -52,4 +52,10 @@ public class RankerConjunctive extends Ranker {
 		
 		Collections.sort(scoredDocs.getScoredDocs(), Collections.reverseOrder());
 	}
+
+	@Override
+	public void runQueryForAd(Query processedQuery, int _numResults,
+			ScoredDocs scoredAdDocs) {
+		throw new UnsupportedOperationException("should be implemented first");
+	}
 }

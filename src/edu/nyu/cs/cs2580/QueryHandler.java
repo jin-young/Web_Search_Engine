@@ -216,6 +216,7 @@ class QueryHandler implements HttpHandler {
         // Ranking.
         //Vector<ScoredDocument> scoredDocs = null;
         ScoredDocs scoredDocs = new ScoredDocs();
+        ScoredDocs scoredAdDocs = new ScoredDocs();
         StringBuffer response = new StringBuffer();
         
         if(uriPath.equals("/search")){      // Search Mode
@@ -226,6 +227,8 @@ class QueryHandler implements HttpHandler {
             long end = System.currentTimeMillis();
             NumberFormat formatter = new DecimalFormat("#0.00000");
             scoredDocs.set_run_time(formatter.format((end - start) / 1000d));
+            
+            ranker.runQueryForAd(processedQuery, 3, scoredAdDocs);
             
             switch (cgiArgs._outputFormat) {
             case TEXT:

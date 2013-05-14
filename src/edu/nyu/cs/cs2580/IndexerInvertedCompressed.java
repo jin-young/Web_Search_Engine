@@ -24,8 +24,8 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
 
     private static final long serialVersionUID = -7002359116603747368L;
 
-    private CompressedIndex _index;
-    private SkipPointer _skipPointer;
+    protected CompressedIndex _index;
+    protected SkipPointer _skipPointer;
 
     // Back-up variables for serializable file write.
     protected Map<String, Document> t_documents;
