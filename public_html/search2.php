@@ -56,7 +56,7 @@
       ?>
         <div style="margin-bottom: 10px">
      <?php 	  echo '<form id="f'.$j.'" method="POST" action="log.php"><input type="hidden" name="url" value="'.$record['_doc']['_url'].'" /><input type="hidden" name="query" value="'.$v.'" /></form>
-				<font size="4em"><a href="#" onclick="document.forms.f'.$j.'.submit();">'.$record["_doc"]["_title"].'</a></font><br/>';
+				<font size="4em"><a href=" " onclick="document.forms.f'.$j.'.submit();">'.$record["_doc"]["_title"].'</a></font><br/>';
 $j++;  ?>  
           <font style="color:green"><?php echo $record["_doc"]["_url"]; ?></font><br/>
           <?php
