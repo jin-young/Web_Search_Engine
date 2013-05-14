@@ -1,6 +1,8 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,6 +11,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
@@ -26,7 +29,8 @@ public class AdIndexer extends IndexerInvertedCompressed {
 
 	// Stores all Document in memory
 	protected Map<Integer, Document> _documents = new HashMap<Integer, Document>();
-
+	protected Map<Integer, Document> t_documents;
+	
 	public AdIndexer(Options opts) {
 		super(opts);
 		try {
@@ -38,18 +42,6 @@ public class AdIndexer extends IndexerInvertedCompressed {
 		connectionString += opts._addbname;
 		userId = opts._addbuser;
 		userPwd = opts._addbpwd;
-	}
-
-	@Override
-	public Document getDoc(int docid) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Document nextDoc(Query query, int docid) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -174,6 +166,12 @@ public class AdIndexer extends IndexerInvertedCompressed {
 
 		flushCurrentIndex(_index, 0, 0);
 		flushCurrentSkipPointer(_skipPointer, 0, 0);
+		try {
+			writeIndexerToFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 	}
 
 	protected void flushCurrentIndex(CompressedIndex tempIndex, int corpusId, int round) {
@@ -214,29 +212,97 @@ public class AdIndexer extends IndexerInvertedCompressed {
 			sp = null;
 		}
 	}
+	
+	@Override
+    public void writeIndexerToFile() throws IOException {
+        ObjectOutputStream writer = createObjOutStream(_options._indexPrefix + "/adindexer.idx");
+
+        // back-up variables from Indexer class
+        t_documents = _documents;
+        t_dictionary = _dictionary;
+        t_numDocs = _numDocs;
+        t_totalTermFrequency = _totalTermFrequency;
+
+        writer.writeObject(this);
+        writer.close();
+    }
 
 	@Override
 	public void loadIndex() throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
+		ObjectInputStream reader = createObjInStream(_options._indexPrefix + "/adindexer.idx");
+        AdIndexer loaded = (AdIndexer) reader.readObject();
+        reader.close();
+        System.out.println("Load Indexer from: " + getIndexerFileName());
 
+        this._documents = loaded.t_documents;
+        this._dictionary = loaded.t_dictionary;
+        this._numDocs = loaded.t_numDocs;
+        this._totalTermFrequency = loaded.t_totalTermFrequency;
+
+        _documentsById = new HashMap<Integer, Document>();
+        
+        for(Document d : _documents.values()) {
+            _documentsById.put(d._docid, d);
+        }
+        
+        _phraseDocMap = new HashMap<String, TreeMap<Integer, ArrayList<Integer>>>();
+
+        // CACHE for improve performance
+        _loadedSkipPointer = new SkipPointer[cacheSize];
+        _loadedIndex = new CompressedIndex[cacheSize];
+        _skipPointerIdxs = new int[cacheSize];
+        _indexIdxs = new int[cacheSize];
+        
+        for(int i=0; i<cacheSize; i++) {
+            System.out.println("Load partial index " + i);
+            _loadedIndex[i] = loadIndex(i);
+            System.out.println("Load partial skip pointer " + i);
+            _loadedSkipPointer[i] = loadSkipPointer(i);
+            _skipPointerIdxs[i] = i;
+            _indexIdxs[i] = i;
+        }
+        
+        System.out.println(Integer.toString(_numDocs) + " Ads loaded " + "with "
+                + Long.toString(_totalTermFrequency) + " terms!");        
 	}
+	
+	protected CompressedIndex loadIndex(int indexId) {
+		CompressedIndex index = null;
+		String filePath = _options._indexPrefix + "/ad_index.idx";
+        if(new File(filePath).exists()) {
+            ObjectInputStream reader = createObjInStream(filePath);
+            
+            try {
+                index = (CompressedIndex) reader.readObject();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Error during load partial index");
+            }
+        } else {
+            System.out.println("WARNING: Index File " + filePath + " does not exist");
+        }
 
-	@Override
-	public int corpusDocFrequencyByTerm(String term) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+        return index;
+    }
 
-	@Override
-	public int corpusTermFrequency(String term) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    protected SkipPointer loadSkipPointer(int indexId) {
+    	SkipPointer skip = null;
+    	String filePath = _options._indexPrefix + "/ad_skip.idx";
+        if(new File(filePath).exists()) {
+            ObjectInputStream reader = createObjInStream(filePath);
+    
+            try {
+                skip = (SkipPointer) reader.readObject();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Error during load partial index");
+            }
+        } else {
+            System.out.println("WARNING: Skip Pointer File " + filePath + " does not exist");
+        }
 
-	@Override
-	public int documentTermFrequency(String term, String url) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
+        return skip;
+    }
 }

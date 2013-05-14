@@ -36,14 +36,14 @@ public class IndexerInvertedCompressed extends IndexerCommon implements Serializ
     protected boolean underTest = false;
     protected Map<Integer, Integer[]> lastProcessedDocInfo;
     
-    private SkipPointer[] _loadedSkipPointer;
-    private int[] _skipPointerIdxs;
-    private CompressedIndex[] _loadedIndex;
-    private int[] _indexIdxs;
-    private int cacheSize = 1;
+    protected SkipPointer[] _loadedSkipPointer;
+    protected int[] _skipPointerIdxs;
+    protected CompressedIndex[] _loadedIndex;
+    protected int[] _indexIdxs;
+    protected int cacheSize = 1;
     
-    private Map<Integer, Document> _documentsById = null;
-    private Map<String, TreeMap<Integer, ArrayList<Integer>>> _phraseDocMap = null;
+    protected Map<Integer, Document> _documentsById = null;
+    protected Map<String, TreeMap<Integer, ArrayList<Integer>>> _phraseDocMap = null;
     
     public IndexerInvertedCompressed(Options options) {
         super(options);

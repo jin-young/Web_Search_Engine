@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 import com.google.gson.Gson;
@@ -255,7 +257,10 @@ class QueryHandler implements HttpHandler {
             case JSON:
             	Gson gson = new Gson();
             	
-            	response.append(gson.toJson(scoredDocs));
+            	Map<String, ScoredDocs> res = new HashMap<String, ScoredDocs>();
+            	res.put("scoredDocs", scoredDocs);
+            	res.put("scoredAdDocs", scoredAdDocs);
+            	response.append(gson.toJson(res));
                 
                 respondWithJsonMsg(exchange, response.toString());
                 break;

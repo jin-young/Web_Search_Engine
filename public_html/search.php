@@ -52,7 +52,7 @@
 	    <?php
 	      if($v) {
 	        echo "Showing results for <b>" . $v . "</b><br/><br/>";
-	        foreach ( $json_output["_sDocs"] as $record ) {
+	        foreach ( $json_output["scoredDocs"]["_sDocs"] as $record ) {
       ?>
         <div style="margin-bottom: 10px">
           <font size="4em"><a href="<?php echo $record["_doc"]["_url"]; ?>"><?php echo $record["_doc"]["_title"]; ?></a></font><br/>
@@ -68,8 +68,20 @@
 	      }
 	    ?>
 	  </div>
-	  <div id="ad_list" style="width: 60%; float: left">
-	    
+	  <div id="ad_list" style="width: 40%; float: left">
+	    <?php
+	      if($v) {
+	        foreach ( $json_output["scoredAdDocs"]["_sDocs"] as $record ) {
+      ?>
+        <div style="margin-bottom: 10px">
+          <font size="4em"><a href="<?php echo $record["_doc"]["_url"]; ?>"><?php echo $record["_doc"]["_title"]; ?></a></font><br/>
+          <font style="color:green"><?php echo $record["_doc"]["_url"]; ?></font><br/>
+          <?php echo $record["_doc"]["keywords"] ?>
+        </div>
+      <?php
+          }
+	      }
+	    ?>
 	  </div>
   </div>
 	<script language="javascript">

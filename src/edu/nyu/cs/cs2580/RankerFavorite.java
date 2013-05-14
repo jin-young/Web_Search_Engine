@@ -17,9 +17,16 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  *          should use one of your more efficient implementations.
  */
 public class RankerFavorite extends Ranker {
-
+	private AdIndexer _adIndexer = null;
     public RankerFavorite(Options options, CgiArguments arguments, Indexer indexer) {
         super(options, arguments, indexer);
+        _adIndexer = new AdIndexer(options);
+        try {
+			_adIndexer.loadIndex();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
         System.out.println("Using Ranker: " + this.getClass().getSimpleName());
     }
 
@@ -86,7 +93,6 @@ public class RankerFavorite extends Ranker {
             }
         }
 
-        //ScoredDocs scoredDocs = new ScoredDocs();
         scoredDocs.set_num_of_result(count);
         Iterator<ScoredDocument> it = rankList.descendingIterator();
         
@@ -128,9 +134,9 @@ public class RankerFavorite extends Ranker {
         
         AdDocumentIndexed doc = null;
         int docid = -1;
-        AdIndexer adIndexer = new AdIndexer(_options);
+        
         long count = 0;
-        while ((doc = (AdDocumentIndexed) adIndexer.nextDoc(query, docid)) != null) {
+        while ((doc = (AdDocumentIndexed) _adIndexer.nextDoc(query, docid)) != null) {
         	docid = doc._docid;
         	count++;
             if (!docIds.contains(doc._docid)) {
@@ -153,7 +159,12 @@ public class RankerFavorite extends Ranker {
             }
         }
 
-        //ScoredDocs scoredDocs = new ScoredDocs();
         scoredAdDocs.set_num_of_result(count);
+        Iterator<ScoredDocument> it = rankList.descendingIterator();
+        
+        while(it.hasNext()) {
+        	ScoredDocument sd = it.next();
+        	scoredAdDocs.add(sd);
+        }
 	}	
 }
