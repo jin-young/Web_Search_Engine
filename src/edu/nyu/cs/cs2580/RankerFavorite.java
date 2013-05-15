@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -55,8 +56,8 @@ public class RankerFavorite extends Ranker {
 
         // Score the document.
         for (String queryToken : query._tokens) {
-            score *= 1.0/((1 - lambda) * 1.0/(_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
-                            * 1.0/((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
+            score *= ((1 - lambda) * (_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
+                            * ((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
                                             .totalTermFrequency()));
         }
         return score;
@@ -140,29 +141,6 @@ public class RankerFavorite extends Ranker {
     }
    
     /**
-     * Calculate Ads document score with query
-     * @param query
-     * @param doc
-     * @return
-     */
-    public double calAdDocScore(Query query, AdDocumentIndexed doc) {
-        double score = 1.0, lambda = 0.50;
-        int docTokenSize = doc.getTokenSize();
-        
-        // Score the document.
-        for (String queryToken : query._tokens) {
-            score *= 1.0 /
-                            ((1 - lambda) 
-                            * 1.0/(_adIndexer.documentTermFrequency(queryToken, doc.getUrl())   // 이 _adIndexer 함수 쓰는데 문제 없는지 확인!!
-                                            / (double) docTokenSize) 
-                        + (lambda)
-                            * 1.0/((double) _adIndexer.corpusTermFrequency(queryToken) 
-                                            / (double) _adIndexer.totalTermFrequency()));
-        }
-        return score;
-    }
-    
-    /**
      * Calculate Score for Ad
      * @param query
      * @param doc
@@ -172,16 +150,22 @@ public class RankerFavorite extends Ranker {
     public double calScoreForAd(Query query, AdDocumentIndexed doc) {
         double w_keyCTRRel=0.5, w_keySearchRel=0.5;
         double weight_title = 3;
+        double keyCTRRel = 1.0;
+        double keySearchRel = 0.0;
         
         // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
         // Cal : # click from this keyword / # num view of this ads
-        double keyCTRRel = (1  / doc.getNumViews() ) * w_keyCTRRel; 
         
+        try{
+            keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / doc.getNumViews() ); 
+        }catch(IOException ie){
+            ie.printStackTrace();
+        }
         // Your keyword/search relevance: How relevant your keyword is to what a customer searches for
         // Cal : F-measure (query & ads contents)
-        double keySearchRel = calAdDocScore(query, doc) * w_keySearchRel;
+        keySearchRel = calScore(query, doc);
                         
-        double score = doc.getCost() * (keyCTRRel + keySearchRel);  
+        double score = doc.getCost() * (keyCTRRel * w_keyCTRRel + keySearchRel * w_keySearchRel);  
         
         return score;       
     }
