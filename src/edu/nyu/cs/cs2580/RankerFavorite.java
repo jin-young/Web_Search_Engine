@@ -156,7 +156,10 @@ public class RankerFavorite extends Ranker {
         // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
         // Cal : # click from this keyword / # num view of this ads
         try{
-            keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / (doc.getNumViews()+1) ); 
+        	if(doc.getNumViews() != 0)
+        		keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / doc.getNumViews() );
+        	else
+        		keyCTRRel = 0.0;
         }catch(IOException ie){
             ie.printStackTrace();
         }

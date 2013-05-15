@@ -231,7 +231,7 @@ class QueryHandler implements HttpHandler {
             NumberFormat formatter = new DecimalFormat("#0.00000");
             scoredDocs.set_run_time(formatter.format((end - start) / 1000d));
             
-            ranker.runQueryForAd(processedQuery, 3, scoredAdDocs);
+            ranker.runQueryForAd(processedQuery, 20, scoredAdDocs);
             
             switch (cgiArgs._outputFormat) {
             case TEXT:
