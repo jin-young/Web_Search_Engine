@@ -55,8 +55,8 @@ public class RankerFavorite extends Ranker {
 
         // Score the document.
         for (String queryToken : query._tokens) {
-            score *= ((1 - lambda) * (_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
-                            * ((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
+            score *= 1.0/((1 - lambda) * 1.0/(_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
+                            * 1.0/((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
                                             .totalTermFrequency()));
         }
         return score;
@@ -134,52 +134,32 @@ public class RankerFavorite extends Ranker {
      * @param doc
      * @return ScoredDocument
      */
-    private ScoredDocument scoreDocumentForAd(Query query, AdDocumentIndexed doc, long totalClick) {
-        double score = calScoreForAd(query, doc, totalClick);
+    private ScoredDocument scoreDocumentForAd(Query query, AdDocumentIndexed doc) {
+        double score = calScoreForAd(query, doc);
         return new ScoredDocument(doc, score);
     }
-
+   
     /**
-     * Total number of clicks in ads that have same query
+     * Calculate Ads document score with query
+     * @param query
+     * @param doc
      * @return
      */
-    private long totalClickSameQuery(Query query){
-        long total = 1;
-        /*
-        Connection con = null;
-        Statement stmt = null;
-        ResultSet rs = null;
-        long total = 0;
-        try {
-            con = DriverManager
-                    .getConnection(connectionString, userId, userPwd);
-            stmt = con.createStatement();
-            rs = stmt.executeQuery("SELECT id, title, url, content, cost FROM ads_info");
-
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                String title = rs.getString("title");
-                String url = rs.getString("url");
-                String content = rs.getString("content");
-                double cost = rs.getDouble("cost");
-                
-                processDocument(id, title, url, content, cost);
-            }
-            
-            writeToFile(0);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (con != null) {
-                try {
-                    con.close();
-                } catch (Exception e) {
-                }
-            }
+    public double calAdDocScore(Query query, AdDocumentIndexed doc) {
+        double score = 1.0, lambda = 0.50;
+        int docTokenSize = doc.getTokenSize();
+        
+        // Score the document.
+        for (String queryToken : query._tokens) {
+            score *= 1.0 /
+                            ((1 - lambda) 
+                            * 1.0/(_adIndexer.documentTermFrequency(queryToken, doc.getUrl())   // 이 _adIndexer 함수 쓰는데 문제 없는지 확인!!
+                                            / (double) docTokenSize) 
+                        + (lambda)
+                            * 1.0/((double) _adIndexer.corpusTermFrequency(queryToken) 
+                                            / (double) _adIndexer.totalTermFrequency()));
         }
-        return total;
-        */
-        return total;
+        return score;
     }
     
     /**
@@ -187,41 +167,30 @@ public class RankerFavorite extends Ranker {
      * @param query
      * @param doc
      * @return score
+     * Reference : https://support.google.com/adwords/answer/2454010?hl=en
      */
-    public double calScoreForAd(Query query, AdDocumentIndexed doc, long totalClick) {
-        double weight_a=0.5, weight_b=0.5, weight_c=0.5, weight_d=0.5;
+    public double calScoreForAd(Query query, AdDocumentIndexed doc) {
+        double w_keyCTRRel=0.5, w_keySearchRel=0.5;
         double weight_title = 3;
-                
-        double opt1 = ( doc.getNumViews() / totalClick ) * weight_a; 
+        
+        // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
+        // Cal : # click from this keyword / # num view of this ads
+        double keyCTRRel = (1  / doc.getNumViews() ) * w_keyCTRRel; 
+        
+        // Your keyword/search relevance: How relevant your keyword is to what a customer searches for
+        // Cal : F-measure (query & ads contents)
+        double keySearchRel = calAdDocScore(query, doc) * w_keySearchRel;
                         
-        double score = doc.getCost() * (opt1 );  
+        double score = doc.getCost() * (keyCTRRel + keySearchRel);  
         
-        return score;
-        
-        /*
-        double score = 1.0, lambda = 0.50;
-        // Vector<String> docTokens = ((DocumentFull)
-        // doc).getConvertedTitleTokens();
-        // docTokens.addAll( ((DocumentFull) doc).getConvertedBodyTokens() );
-        int docTokenSize = doc.getTokenSize();
-
-        // Score the document.
-        for (String queryToken : query._tokens) {
-            score *= ((1 - lambda) * (_indexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
-                            * ((double) _indexer.corpusTermFrequency(queryToken) / (double) _indexer
-                                            .totalTermFrequency()));
-        }
-        return score;
-        */
+        return score;       
     }
     
 	@Override
 	public void runQueryForAd(Query query, int numResults, ScoredDocs scoredAdDocs) {
 		TreeSet<ScoredDocument> rankList = new TreeSet<ScoredDocument>();
     	Set<Integer> docIds = new HashSet<Integer>(); //for speed up
-        
-    	long totalClick =totalClickSameQuery(query); 
-    	
+            	
         AdDocumentIndexed doc = null;
         int docid = -1;
         
@@ -231,7 +200,7 @@ public class RankerFavorite extends Ranker {
         	count++;
             if (!docIds.contains(doc._docid)) {
                 
-            	ScoredDocument newOne = scoreDocumentForAd(query, doc, totalClick);
+            	ScoredDocument newOne = scoreDocumentForAd(query, doc);
             	
             	if (rankList.size() >= numResults) { 
             		ScoredDocument currentMinScoreDoc = rankList.first();

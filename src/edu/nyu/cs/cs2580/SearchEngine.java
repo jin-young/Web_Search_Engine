@@ -67,6 +67,7 @@ public class SearchEngine {
 		public String _addbname = "";
 		public String _addbuser = "";
 		public String _addbpwd = "";
+		public String _addbport = "";
 
 		/**
 		 * Constructor for options.
@@ -116,6 +117,9 @@ public class SearchEngine {
 			
 			_addbname = options.get("ad_db_name");
 			Check(_addbname != null, "Missing option: database name for ad!");
+			
+			_addbport = options.get("ad_db_port");
+            Check(_addbport != null, "Missing option: database port for ad!");
 			
 			_addbuser = options.get("ad_db_user");
 			Check(_addbuser != null, "Missing option: user id for accessing ad db!");
