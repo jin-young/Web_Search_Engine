@@ -154,6 +154,7 @@ class QueryHandler implements HttpHandler {
     private void respondWithJsonMsg(HttpExchange exchange, final String message) throws IOException {
         Headers responseHeaders = exchange.getResponseHeaders();
         responseHeaders.set("Content-Type", "application/json");
+        responseHeaders.set("Content-Length", Integer.toString(message.getBytes().length));
         exchange.sendResponseHeaders(200, 0); // arbitrary number of
         // bytes
         OutputStream responseBody = exchange.getResponseBody();
