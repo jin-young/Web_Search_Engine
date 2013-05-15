@@ -200,7 +200,7 @@ public class RankerFavorite extends Ranker {
         	count++;
             if (!docIds.contains(doc._docid)) {
                 
-            	ScoredDocument newOne = scoreDocumentForAd(query, doc);
+            	ScoredDocument newOne = scoreDocument(query, doc);
             	
             	if (rankList.size() >= numResults) { 
             		ScoredDocument currentMinScoreDoc = rankList.first();
