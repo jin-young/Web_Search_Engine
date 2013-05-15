@@ -240,11 +240,11 @@ public abstract class IndexerCommon extends Indexer {
         int idx = _dictionary.get(word);
 
         Vector<Integer> docList = retriveDocList(word);
-        System.out.println("Doc List");
-        for(Integer i : docList) {
-        	System.out.print(i + ", ");
-        }
-        System.out.println();
+        //System.out.println("Doc List");
+        //for(Integer i : docList) {
+        //	System.out.print(i + ", ");
+        //}
+        //System.out.println();
         
         int lt = docList.size() - 1;
 
