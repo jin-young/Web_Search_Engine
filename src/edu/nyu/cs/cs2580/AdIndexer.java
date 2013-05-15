@@ -322,8 +322,9 @@ public class AdIndexer extends IndexerInvertedCompressed {
                     .getConnection(connectionString, userId, userPwd);
             stmt = con.createStatement();
             rs = stmt.executeQuery("SELECT count(*) as result FROM click_log WHERE query='"+query+"'");
-            result = rs.getDouble("result");   
-            writeToFile(0);
+            if(rs.next()) {
+            	result = rs.getDouble("result");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
