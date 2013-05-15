@@ -11,6 +11,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.TreeMap;
 
 import org.jsoup.Jsoup;
@@ -115,37 +116,6 @@ public class AdIndexer extends IndexerInvertedCompressed {
 		++_numDocs;
 	}
 
-	/**
-	 * Get Pure content from file
-	 * 
-	 * @param file
-	 * @return content
-	 */
-	public String getFileContent(String url) {
-		org.jsoup.nodes.Element body = null;
-		try {
-			body = Jsoup.connect(url).get().body();
-			// Remove all script and style elements and those of class "hidden".
-			body.select("script, style, .hidden").remove();
-
-			// Remove all style and event-handler attributes from all elements.
-			Elements all = body.select("*");
-			for (Element el : all) {
-				for (Attribute attr : el.attributes()) {
-					String attrKey = attr.getKey();
-					if (attrKey.equals("style") || attrKey.startsWith("on")) {
-						el.removeAttr(attrKey);
-					}
-				}
-			}
-		} catch (IOException e) {
-			System.err.println("Error Occurred while process document '" + url
-					+ "'");
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return body.text();
-	}
 
 	public int makeIndex(String content, int docId) {
 		Map<Integer, ArrayList<Integer>> wordsPositionsInDoc = wordsPositionsInDoc(content);
@@ -164,6 +134,52 @@ public class AdIndexer extends IndexerInvertedCompressed {
 		}
 		return numOfTokens;
 	}
+	
+	protected Map<Integer, ArrayList<Integer>> wordsPositionsInDoc(String content) {
+        Scanner s = new Scanner(content); // Uses white space by default.
+
+        // word id and position of the word in current doc
+        Map<Integer, ArrayList<Integer>> wordsPositions = new HashMap<Integer, ArrayList<Integer>>();
+        Map<Integer, Integer> lastPosition = new HashMap<Integer, Integer>();
+
+        int position = 1;
+
+        while (s.hasNext()) {
+            String term = trimPunctuation(s.next());
+
+            _stemmer.setCurrent(term);
+            _stemmer.stem();
+            
+            String token = _stemmer.getCurrent().toLowerCase();
+            int postingId = -1;
+
+            if (_dictionary.containsKey(token)) {
+                postingId = _dictionary.get(token);
+            } else {
+                postingId = _dictionary.size() + 1;
+                _dictionary.put(token, postingId);
+            }
+
+            ArrayList<Integer> positions = null;
+            if (!wordsPositions.containsKey(postingId)) {
+                positions = new ArrayList<Integer>();
+                positions.add(position);
+                wordsPositions.put(postingId, positions);
+            } else {
+                positions = wordsPositions.get(postingId);
+                // apply delta encoding
+                positions.add(position - lastPosition.get(postingId));
+            }
+            // remember last position because of delta encoding
+            lastPosition.put(postingId, position);
+
+            position++;
+            ++_totalTermFrequency;
+        }
+        s.close();
+
+        return wordsPositions;
+    }
 
 	@Override
 	public void writeToFile(int round) {
