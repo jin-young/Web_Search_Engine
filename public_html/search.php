@@ -30,7 +30,7 @@
 	<div>
 		
 	  <form acton="search.php" method="get" onsubmit="return isQueryNotEmpty(this);">
-	    <a href="main.html"> 
+	    <a href="index.html"> 
 		    <img align="absmiddle" width="100" height="30" src="./image/google.png"> 
 	    </a>
 		  <input type="text" name="query" style="width: 600; height:30" value="<?php echo $_GET["query"] ?>"/> 
