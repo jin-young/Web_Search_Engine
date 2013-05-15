@@ -32,7 +32,7 @@
 		
 	  <form acton="search.php" method="get" onsubmit="return isQueryNotEmpty(this);">
 	    <a href="index.html"> 
-		    <img align="absmiddle" width="100" height="30" src="./image/google.png"> 
+		    <img align="absmiddle"  height="40" src="./image/logo.jpg"> 
 	    </a>
 		  <input type="text" name="query" style="width: 600; height:30" value='<?= $v ?>'/> 
 		  <input type="submit" id="search-submit" value=""
