@@ -138,6 +138,7 @@ public class RankerFavorite extends Ranker {
      */
     private ScoredDocument scoreDocumentForAd(Query query, AdDocumentIndexed doc) {
         double score = calScoreForAd(query, doc);
+        System.out.println("SCORE " + score);
         return new ScoredDocument(doc, score);
     }
    
@@ -156,7 +157,7 @@ public class RankerFavorite extends Ranker {
         // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
         // Cal : # click from this keyword / # num view of this ads
         try{
-            keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / doc.getNumViews() ); 
+            keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / (doc.getNumViews()+1) ); 
         }catch(IOException ie){
             ie.printStackTrace();
         }
@@ -180,7 +181,7 @@ public class RankerFavorite extends Ranker {
         double score = doc.getCost() * (keyCTRRel * w_keyCTRRel + keySearchRel * w_keySearchRel +
                                                     keyTitleRel * w_title);  
         
-        return score;       
+        return score;
     }
     
 	@Override
