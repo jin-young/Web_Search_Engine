@@ -23,7 +23,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class AdIndexer extends IndexerInvertedCompressed {
 	private static final long serialVersionUID = 3405003808512996691L;
 
-	private String connectionString = "jdbc:mysql://";
+	private String connectionString = "";
 	private String userId;
 	private String userPwd;
 	private String dbPort;
@@ -41,8 +41,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 			System.exit(-1);
 		}
 		
-		connectionString = connectionString + opts._addbhost + ":" + opts._addbport + "/" + opts._addbname;
-		connectionString += opts._addbname;
+		connectionString = "jdbc:mysql://" + opts._addbhost + ":" + opts._addbport + "/" + opts._addbname;
 		userId = opts._addbuser;
 		userPwd = opts._addbpwd;
 	}
@@ -57,7 +56,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 			con = DriverManager
 					.getConnection(connectionString, userId, userPwd);
 			stmt = con.createStatement();
-			rs = stmt.executeQuery("SELECT id, title, url, content, cost FROM ads_info");
+			rs = stmt.executeQuery("SELECT id, title, url, content, cost, num_view FROM ads_info");
 
 			while (rs.next()) {
 				int id = rs.getInt("id");
