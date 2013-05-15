@@ -9,8 +9,8 @@
 <script type="text/javascript" src="./scripts/g04.js"></script>
 <link rel="stylesheet" href="./styles/g04.css" type="text/css" media="screen" />
 
-<?php 
-  $v = $_GET["query"];
+<?php
+  $v = $_GET["query"]; 
   if($v) {
     $query = str_replace(' ', '%20', $v);
   	$query = str_replace('"', '%22', $query);
@@ -34,7 +34,7 @@
 	    <a href="index.html"> 
 		    <img align="absmiddle" width="100" height="30" src="./image/google.png"> 
 	    </a>
-		  <input type="text" name="query" style="width: 600; height:30" value="<?php echo $_GET["query"] ?>"/> 
+		  <input type="text" name="query" style="width: 600; height:30" value='<?= $v ?>'/> 
 		  <input type="submit" id="search-submit" value=""
 		        style="vertical-align: top; background-image:url(image/searchbutton.png); border: solid 0px #000000; width: 70; height: 30;" />
 	  </form>
@@ -79,7 +79,7 @@
           <form id="f<?= $j ?>" method="POST" action="log.php">
             <input type="hidden" name="url" value="<?=$record['_doc']['_url'] ?>" />
             <input type="hidden" name="docid" value="<?=$record['_doc']['_docid'] ?>" />
-            <input type="hidden" name="query" value="<?=$v?>" />
+            <input type="hidden" name="query" value='<?= $v ?>' />
           </form>
           <font size="4em"><a href="#" onclick="document.forms.f<?=$j?>.submit();"><?=$record["_doc"]["_title"]?></a></font><br/>
           <font style="color:green">
@@ -92,8 +92,8 @@
           <?php echo $record["_doc"]["keywords"] ?>
         </div>
       <?php
+             $j++;
           }
-          $j++;
 	      }
 	    ?>
 	  </div>
