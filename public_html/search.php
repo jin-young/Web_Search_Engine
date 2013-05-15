@@ -15,7 +15,7 @@
     $query = str_replace(' ', '%20', $v);
   	$query = str_replace('"', '%22', $query);
   	
-  	$json_url = 'http://linax2.cims.nyu.edu:25804/search?query=' . $query . '&format=json&ranker=favorite';
+  	$json_url = 'http://localhost:25804/search?query=' . $query . '&format=json&ranker=favorite';
      
     // Getting results
     $context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
@@ -34,7 +34,7 @@
 	    <a href="index.html"> 
 		    <img align="absmiddle"  height="40" src="./image/logo.jpg"> 
 	    </a>
-		  <input type="text" name="query" style="width: 600; height:30" value="'<?php echo $v ?>'/> 
+		  <input type="text" name="query" style="width: 600; height:30" value='<?php echo $v ?>'/> 
 		  <input type="submit" id="search-submit" value=""
 		        style="vertical-align: top; background-image:url(image/searchbutton.png); border: solid 0px #000000; width: 70; height: 30;" />
 	  </form>
