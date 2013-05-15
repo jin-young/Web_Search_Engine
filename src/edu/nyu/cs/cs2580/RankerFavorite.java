@@ -138,7 +138,6 @@ public class RankerFavorite extends Ranker {
      */
     private ScoredDocument scoreDocumentForAd(Query query, AdDocumentIndexed doc) {
         double score = calScoreForAd(query, doc);
-        System.out.println("SCORE " + score);
         return new ScoredDocument(doc, score);
     }
    
