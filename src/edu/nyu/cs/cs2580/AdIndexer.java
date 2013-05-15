@@ -23,9 +23,10 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class AdIndexer extends IndexerInvertedCompressed {
 	private static final long serialVersionUID = 3405003808512996691L;
 
-	private String connectionString = "jdbc:mysql://localhost:3306/";
+	private String connectionString = "jdbc:mysql://localhost";
 	private String userId;
 	private String userPwd;
+	private String dbPort;
 
 	// Stores all Document in memory
 	protected Map<Integer, Document> _documents = new HashMap<Integer, Document>();
@@ -39,6 +40,8 @@ public class AdIndexer extends IndexerInvertedCompressed {
 			e.printStackTrace();
 			System.exit(-1);
 		}
+		
+		connectionString = connectionString + ":" + opts._addbport + "/" + opts._addbname;
 		connectionString += opts._addbname;
 		userId = opts._addbuser;
 		userPwd = opts._addbpwd;
@@ -62,8 +65,9 @@ public class AdIndexer extends IndexerInvertedCompressed {
 				String url = rs.getString("url");
 				String content = rs.getString("content");
 				double cost = rs.getDouble("cost");
+				int num_view = rs.getInt("num_view");
 
-				processDocument(id, title, url, content, cost);
+				processDocument(id, title, url, content, cost, num_view);
 			}
 			
 			writeToFile(0);
@@ -86,7 +90,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 	 * you need to dynamically determine whether to drop the processing of a
 	 * certain inverted list.
 	 */
-	public void processDocument(int did, String title, String url, String content, double cost) {
+	public void processDocument(int did, String title, String url, String content, double cost, int num_view) {
 		System.out.println(did + ". " + title);
 
 		int tokenSize = 0;
@@ -103,6 +107,7 @@ public class AdIndexer extends IndexerInvertedCompressed {
 		doc.setTokenSize(tokenSize);
 		doc.setKeywords(content);
 		doc.setCost(cost);
+		doc.setNumViews(num_view);
 
 		// doc.setNumViews(numViews.get(file.getName()).getNumViews());
 		// doc.setPageRank(numViews.get(file.getName()).getPageRank());
