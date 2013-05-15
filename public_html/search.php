@@ -18,7 +18,8 @@
   	$json_url = 'http://localhost:25804/search?query=' . $query . '&format=json&ranker=favorite';
      
     // Getting results
-    $result =  file_get_contents($json_url); // Getting jSON result string
+    $context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
+    $result =  file_get_contents($json_url,false,$context); // Getting jSON result string
     $json_output = json_decode($result, true);
   } else {
   
