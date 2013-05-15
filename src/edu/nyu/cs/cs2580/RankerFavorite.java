@@ -3,6 +3,7 @@ package edu.nyu.cs.cs2580;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
@@ -148,24 +149,36 @@ public class RankerFavorite extends Ranker {
      * Reference : https://support.google.com/adwords/answer/2454010?hl=en
      */
     public double calScoreForAd(Query query, AdDocumentIndexed doc) {
-        double w_keyCTRRel=0.5, w_keySearchRel=0.5;
-        double weight_title = 3;
+        double w_keyCTRRel=0.5, w_keySearchRel=0.5, w_title=0.5;
         double keyCTRRel = 1.0;
         double keySearchRel = 0.0;
-        
+        double keyTitleRel = 0;
         // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
         // Cal : # click from this keyword / # num view of this ads
-        
         try{
             keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / doc.getNumViews() ); 
         }catch(IOException ie){
             ie.printStackTrace();
         }
+        
         // Your keyword/search relevance: How relevant your keyword is to what a customer searches for
         // Cal : F-measure (query & ads contents)
         keySearchRel = calScore(query, doc);
-                        
-        double score = doc.getCost() * (keyCTRRel * w_keyCTRRel + keySearchRel * w_keySearchRel);  
+        
+        // Give weight when the query is on the title
+        keyTitleRel = 0;
+        Scanner scan = new Scanner(doc.getTitle());
+        while(scan.hasNext()){
+            String word = scan.next();
+            for( String token : query._tokens){
+                if(token.equals(word))
+                    keyTitleRel++;
+            }
+        }
+        scan.close();
+        
+        double score = doc.getCost() * (keyCTRRel * w_keyCTRRel + keySearchRel * w_keySearchRel +
+                                                    keyTitleRel * w_title);  
         
         return score;       
     }
