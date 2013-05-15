@@ -68,6 +68,7 @@ public class SearchEngine {
 		public String _addbuser = "";
 		public String _addbpwd = "";
 		public String _addbport = "";
+		public String _addbhost = "";
 
 		/**
 		 * Constructor for options.
@@ -117,6 +118,9 @@ public class SearchEngine {
 			
 			_addbname = options.get("ad_db_name");
 			Check(_addbname != null, "Missing option: database name for ad!");
+			
+			_addbhost = options.get("ad_db_host");
+			Check(_addbname != null, "Missing option: database host for ad!");
 			
 			_addbport = options.get("ad_db_port");
             Check(_addbport != null, "Missing option: database port for ad!");

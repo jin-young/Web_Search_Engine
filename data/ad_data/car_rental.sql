@@ -1,8 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `addb` /*!40100 DEFAULT CHARACTER SET latin1 */;
-USE `addb`;
+CREATE DATABASE  IF NOT EXISTS `jj1233_search_engine` /*!40100 DEFAULT CHARACTER SET latin1 */;
+USE `jj1233_search_engine`;
 -- MySQL dump 10.13  Distrib 5.5.31, for debian-linux-gnu (i686)
 --
--- Host: localhost    Database: addb
+-- Host: localhost    Database: jj1233_search_engine
 -- ------------------------------------------------------
 -- Server version	5.5.31-0ubuntu0.13.04.1
 
