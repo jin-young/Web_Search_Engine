@@ -55,9 +55,23 @@ class ScoredDocument implements Comparable<ScoredDocument> {
 	@Override
 	public int compareTo(ScoredDocument o) {
 		if (this._score == o._score) {
-			return 0;
+			return Integer.compare(o.getDocId(), this.getDocId());
 		}
 		return (this._score > o._score) ? 1 : -1;
+	}
+
+	@Override
+	public boolean equals(Object other) {
+		if (!(other instanceof ScoredDocument)) {
+			return false;
+		}
+		ScoredDocument otherNode = (ScoredDocument) other;
+		return getDocId() == otherNode.getDocId();
+	}
+
+	@Override
+	public int hashCode() {
+		return getDocId();
 	}
 
 	public void loadSTextToDisplay(Query query, IndexerCommon indexer) {
