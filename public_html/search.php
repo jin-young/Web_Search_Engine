@@ -43,7 +43,7 @@
     <div id="peformance_summarny" style="margin-bottom: 5px">
       <?php 
         if($v) {
-          echo $json_output["_num_of_result"] . " results (" . $json_output["_run_time"] . " seconds)";
+          echo $json_output["scoredDocs"]["_num_of_result"] . " results (" . $json_output["scoredDocs"]["_run_time"] . " seconds)";
         }
       ?>
     </div>
