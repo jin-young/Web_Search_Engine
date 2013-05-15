@@ -48,7 +48,7 @@
         }
       ?>
     </div>
-    <div id="result_list" style="width: 60%; float: left">
+    <div id="result_list" style="width: 58%; float: left; padding-right: 5px">
 	    <!-- convert Json into html format -->
 	    <?php
 	      if($v) {
@@ -69,7 +69,7 @@
 	      }
 	    ?>
 	  </div>
-	  <div id="ad_list" style="width: 40%; float: left">
+	  <div id="ad_list" style="width: 38%; float: left; padding-left: 5px">
 	    <?php
 	      if($v) {
 	        $j=0;

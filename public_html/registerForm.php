@@ -9,20 +9,20 @@
 		</tr>
 		<tr>
 			<td> 
-				<input type="text" id="company" value="Company" size="47"
-					onFocus="this.value=''" style="background-color:#dfffff;color:gray">
+				<input type="text" id="company" placeholder="Company" size="47"
+				   style="background-color:#dfffff;color:gray">
 			</td>
 		</tr>
 		<tr>
 			<td> 
-				<input type="text" id="title" value="Title" size="47"
-					onFocus="this.value=''" style="background-color:#dfffff;color:gray">
+				<input type="text" id="title" placeholder="Title" size="47"
+					 style="background-color:#dfffff;color:gray">
 			</td>
 		</tr>
 		<tr>
 			<td> 
-				<input type="text" id="url" value="URL" size="47" 
-					onFocus="this.value=''" style="background-color:#dfffff;color:gray">
+				<input type="text" id="url" placeholder="URL" size="47" 
+					 style="background-color:#dfffff;color:gray">
 			</td>
 		</tr>
 		<tr>
@@ -32,13 +32,13 @@
 		</tr>
 		<tr>
 			<td> 
-				$&nbsp;<input type="text" id="cost" value="Cost" 
-					onFocus="this.value=''" style="background-color:#dfffff;color:gray">
+				$&nbsp;<input type="text" id="cost" placeholder="Cost" 
+					 style="background-color:#dfffff;color:gray">
 			</td>
 		</tr>
 		<tr>
 			<td align="center"> <!-- the argument should check -->
-				<button type="button" onClick="register($('#company').attr('value'), 
+				<button type="button" onClick="alert($('#title').attr('value')); register($('#company').attr('value'), 
 														$('#title').attr('value'),
 														$('#url').attr('value'),
 														$('#content').attr('value'),
