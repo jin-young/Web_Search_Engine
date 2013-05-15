@@ -18,9 +18,13 @@
   	$json_url = 'http://localhost:25804/search?query=' . $query . '&format=json&ranker=favorite';
      
     // Getting results
-    $context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
-    $result =  file_get_contents($json_url,false,$context); // Getting jSON result string
-    $json_output = json_decode($result, true);
+    $opts = array('http'=>array('method'=>"GET", 'header'=>"Accept-language: en\r\n"));
+
+    $context = stream_context_create($opts);
+    //$result =  file_get_contents($json_url,false,$context); // Getting jSON result string
+    $fp = fopen($json_url, 'r', false, $context);
+    $response = stream_get_contents($fp);
+    $json_output = json_decode($response, true);
   } else {
   
   }
