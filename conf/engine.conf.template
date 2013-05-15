@@ -28,3 +28,4 @@ log_miner_type: numviews
 ad_db_name: dbname
 ad_db_user: userid
 ad_db_pwd: userpwd
+ad_db_port: 3306
