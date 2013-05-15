@@ -34,7 +34,7 @@
 	    <a href="index.html"> 
 		    <img align="absmiddle"  height="40" src="./image/logo.jpg"> 
 	    </a>
-		  <input type="text" name="query" style="width: 600; height:30" value='<?= $v ?>'/> 
+		  <input type="text" name="query" style="width: 600; height:30" value='<?php echo $v ?>'/> 
 		  <input type="submit" id="search-submit" value=""
 		        style="vertical-align: top; background-image:url(image/searchbutton.png); border: solid 0px #000000; width: 70; height: 30;" />
 	  </form>
@@ -56,7 +56,7 @@
 	        foreach ( $json_output["scoredDocs"]["_sDocs"] as $record ) {
       ?>
         <div style="margin-bottom: 10px">
-				  <font size="4em"><a href="<?=$record['_doc']['_url'] ?>"><?=$record["_doc"]["_title"]?></a></font><br/>
+				  <font size="4em"><a href="<?php echo $record['_doc']['_url'] ?>"><?php echo $record["_doc"]["_title"]?></a></font><br/>
           <font style="color:green"><?php echo $record["_doc"]["_url"]; ?></font><br/>
           <?php
             foreach ( $record["_doc"]["texts2Display"] as $snippet ) {
@@ -76,12 +76,12 @@
 	        foreach ( $json_output["scoredAdDocs"]["_sDocs"] as $record ) {
       ?>
         <div style="margin-bottom: 10px">
-          <form id="f<?= $j ?>" method="POST" action="log.php">
-            <input type="hidden" name="url" value="<?=$record['_doc']['_url'] ?>" />
-            <input type="hidden" name="docid" value="<?=$record['_doc']['_docid'] ?>" />
-            <input type="hidden" name="query" value='<?= $v ?>' />
+          <form id="f<?php echo  $j ?>" method="POST" action="log.php">
+            <input type="hidden" name="url" value="<?php echo $record['_doc']['_url'] ?>" />
+            <input type="hidden" name="docid" value="<?php echo $record['_doc']['_docid'] ?>" />
+            <input type="hidden" name="query" value='<?php echo  $v ?>' />
           </form>
-          <font size="4em"><a href="#" onclick="document.forms.f<?=$j?>.submit();"><?=$record["_doc"]["_title"]?></a></font><br/>
+          <font size="4em"><a href="#" onclick="document.forms.f<?php echo $j?>.submit();"><?php echo $record["_doc"]["_title"]?></a></font><br/>
           <font style="color:green">
             <?php 
               $link = $record["_doc"]["_url"];
