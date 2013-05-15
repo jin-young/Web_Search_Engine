@@ -255,14 +255,20 @@ class QueryHandler implements HttpHandler {
                 
                 break;
             case JSON:
+            	System.out.println(1);
             	Gson gson = new Gson();
-            	
+            	System.out.println(2);
             	Map<String, ScoredDocs> res = new HashMap<String, ScoredDocs>();
+            	System.out.println(3);
             	res.put("scoredDocs", scoredDocs);
+            	System.out.println(4);
             	res.put("scoredAdDocs", scoredAdDocs);
+            	System.out.println(5);
             	response.append(gson.toJson(res));
+            	System.out.println(6);
                 
                 respondWithJsonMsg(exchange, response.toString());
+                System.out.println(7);
                 break;
             default:
                 // nothing
