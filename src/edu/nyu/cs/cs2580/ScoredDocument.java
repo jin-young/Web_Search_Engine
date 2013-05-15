@@ -55,7 +55,7 @@ class ScoredDocument implements Comparable<ScoredDocument> {
 	@Override
 	public int compareTo(ScoredDocument o) {
 		if (this._score == o._score) {
-			return Integer.compare(o.getDocId(), this.getDocId());
+		    return o.getDocId() - this.getDocId();
 		}
 		return (this._score > o._score) ? 1 : -1;
 	}
