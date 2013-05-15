@@ -58,7 +58,7 @@
       ?>
         <div style="margin-bottom: 10px">
 				  <font size="4em"><a href="<?php echo $record['_doc']['_url'] ?>"><?php echo $record["_doc"]["_title"]?></a></font><br/>
-          <font style="color:green"><?php echo $record["_doc"]["_url"]; ?></font><br/>
+          <font style="color:green"><?php echo $record["_doc"]["_url"]; ?>&nbsp;[<?php echo $record["_score"]?>]</font><br/>
           <?php
             foreach ( $record["_doc"]["texts2Display"] as $snippet ) {
               echo $snippet;
@@ -88,7 +88,8 @@
               $link = $record["_doc"]["_url"];
               $url = parse_url($link);
               echo $url['scheme'] . "://" . $url['host'];
-            ?>
+            ?>&nbsp;
+            [<?php echo $record["_score"]?>]
           </font><br/>
           <?php echo $record["_doc"]["keywords"] ?>
         </div>

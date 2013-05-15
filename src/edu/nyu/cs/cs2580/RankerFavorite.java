@@ -63,6 +63,35 @@ public class RankerFavorite extends Ranker {
         }
         return score;
     }
+    
+    
+    public double calScoreWithAdIndex(Query query, AdDocumentIndexed doc) {
+    	double count = 0;
+    	Scanner scan = new Scanner(doc.getKeywords());
+        while(scan.hasNext()){
+            String word = scan.next();
+            for( String token : query._tokens){
+                if(token.equals(word))
+                    count++;
+            }
+        }
+        return count;
+/*
+    	double score = 1.0, lambda = 0.50;
+        // Vector<String> docTokens = ((DocumentFull)
+        // doc).getConvertedTitleTokens();
+        // docTokens.addAll( ((DocumentFull) doc).getConvertedBodyTokens() );
+        int docTokenSize = doc.getTokenSize();
+
+        // Score the document.
+        for (String queryToken : query._tokens) {
+            score *= ((1 - lambda) * (_adIndexer.documentTermFrequency(queryToken, doc.getUrl()) / (double) docTokenSize) + (lambda)
+                            * ((double) _adIndexer.corpusTermFrequency(queryToken) / (double) _adIndexer
+                                            .totalTermFrequency()));
+        }
+        return score;
+        */
+    }
 
 	@Override
 	public void runQuery(Query query, int numResults, ScoredDocs scoredDocs) {
@@ -149,24 +178,44 @@ public class RankerFavorite extends Ranker {
      * Reference : https://support.google.com/adwords/answer/2454010?hl=en
      */
     public double calScoreForAd(Query query, AdDocumentIndexed doc) {
-        double w_keyCTRRel=0.5, w_keySearchRel=0.5, w_title=0.5;
+        double w_keyCTRRel=0.5, w_keySearchRel=0.5, w_title=0.5, w_queryAdRel=0.5;
         double keyCTRRel = 1.0;
         double keySearchRel = 0.0;
         double keyTitleRel = 0;
+        double queryAdRel = 0;
+        
         // Your keyword's past clickthrough rate (CTR): How often that keyword led to clicks on your ad
         // Cal : # click from this keyword / # num view of this ads
+        double numClickWithQuery = 0;
         try{
+        	doc.setNumViews(_adIndexer.getNumView(doc._docid));
+        	numClickWithQuery = _adIndexer.getNumLogQuery(query._query, doc._docid);
         	if(doc.getNumViews() != 0)
-        		keyCTRRel = ( _adIndexer.getNumLogQuery(query._query) / doc.getNumViews() );
+        		keyCTRRel = ( numClickWithQuery / doc.getNumViews() );
         	else
         		keyCTRRel = 0.0;
         }catch(IOException ie){
             ie.printStackTrace();
         }
+              
+        // Past clickthrough rate (CTR) : How often users that request same query click on your ad.
+        // Cal : # clicks this ad with the query / # clicks with the query
+        try{
+        	double numClickWithQueryAll = _adIndexer.getNumLogQueryAll(query._query);
+        	if(numClickWithQueryAll != 0.0)
+        		queryAdRel = numClickWithQuery / numClickWithQueryAll;
+        	
+        }catch(IOException ie){
+        	ie.printStackTrace();
+        }
+        
+        
         
         // Your keyword/search relevance: How relevant your keyword is to what a customer searches for
         // Cal : F-measure (query & ads contents)
-        keySearchRel = calScore(query, doc);
+        keySearchRel = calScoreWithAdIndex(query, doc);
+        
+        
         
         // Give weight when the query is on the title
         keyTitleRel = 0;
@@ -180,9 +229,19 @@ public class RankerFavorite extends Ranker {
         }
         scan.close();
         
+        /*
+        System.out.println("\ndocid : " + doc._docid);
+        System.out.println("cost : " + doc.getCost());
+        System.out.println("keyCTRRel : " + keyCTRRel);
+        System.out.println("w_keyCTRRel : " + w_keyCTRRel);
+        System.out.println("keySearchRel : " + keySearchRel);
+        System.out.println("w_keySearchRel : " + w_keySearchRel);
+        System.out.println("keyTitleRel : " + keyTitleRel);
+        System.out.println("w_title : " + w_title);
+        */
         double score = doc.getCost() * (keyCTRRel * w_keyCTRRel + keySearchRel * w_keySearchRel +
-                                                    keyTitleRel * w_title);  
-        
+                                                    keyTitleRel * w_title + queryAdRel * w_queryAdRel);  
+        System.out.println("score : " + score);
         return score;
     }
     

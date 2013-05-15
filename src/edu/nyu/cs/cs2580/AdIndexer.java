@@ -312,7 +312,33 @@ public class AdIndexer extends IndexerInvertedCompressed {
         return skip;
     }
     
-    public double getNumLogQuery(String query) throws IOException {
+    public double getNumLogQuery(String query, int docid) throws IOException {
+        Connection con = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        double result = 1;
+        try {
+            con = DriverManager
+                    .getConnection(connectionString, userId, userPwd);
+            stmt = con.createStatement();
+            rs = stmt.executeQuery("SELECT count(*) as result FROM click_log WHERE query='"+query+"' and ads_id=" + docid);
+            if(rs.next()) {
+            	result = rs.getDouble("result");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (Exception e) {
+                }
+            }
+        }
+        return result;
+    }
+    
+    public double getNumLogQueryAll(String query) throws IOException {
         Connection con = null;
         Statement stmt = null;
         ResultSet rs = null;
@@ -337,4 +363,30 @@ public class AdIndexer extends IndexerInvertedCompressed {
         }
         return result;
     }
+
+	public int getNumView(int docid) {
+		Connection con = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        int result = 1;
+        try {
+            con = DriverManager
+                    .getConnection(connectionString, userId, userPwd);
+            stmt = con.createStatement();
+            rs = stmt.executeQuery("SELECT num_view FROM ads_info WHERE id=" + docid);
+            if(rs.next()) {
+            	result = rs.getInt("num_view");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (Exception e) {
+                }
+            }
+        }
+        return result;
+	}
 }
