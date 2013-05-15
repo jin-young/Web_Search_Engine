@@ -26,10 +26,7 @@ corpus_analyzer_type: pagerank
 log_miner_type: numviews
 
 ad_db_name: dbname
+ad_db_host: localhost
 ad_db_user: userid
 ad_db_pwd: userpwd
-<<<<<<< HEAD
-ad_db_port: 3306
-=======
 ad_db_port: userport
->>>>>>> f1e865cc2f2b1487e437053143af7fe57cdfdf08
